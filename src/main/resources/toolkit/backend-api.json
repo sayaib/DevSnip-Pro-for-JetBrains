@@ -1,0 +1,989 @@
+[
+ {
+  "id": "web.curl",
+  "command": "curlConverter",
+  "title": "cURL Converter",
+  "summary": "Turn a cURL command (from the browser's \"Copy as cURL\" or API docs) into fetch, Axios, Node, Python, Go, PHP, Java, Dart/Flutter, Kotlin/OkHttp, Swift or raw HTTP.",
+  "guide": "Paste the command as copied: bash or Windows cmd quoting, line continuations and combined flags (-sSL, -XPOST) are understood. Headers, JSON / form / multipart bodies, basic auth, cookies, -G, --json, timeouts and redirects are converted. Nothing is sent anywhere.",
+  "keywords": [
+   "curl",
+   "copy as curl",
+   "fetch",
+   "axios",
+   "requests",
+   "http client",
+   "okhttp",
+   "urlsession",
+   "dio",
+   "convert curl"
+  ],
+  "icon": "terminal",
+  "live": true,
+  "network": false,
+  "fields": [
+   {
+    "id": "curl",
+    "label": "cURL command",
+    "kind": "code",
+    "language": "shell",
+    "rows": 9,
+    "required": true,
+    "fromEditor": true,
+    "default": "curl 'https://api.example.com/v1/orders?status=open' \\\n  -X POST \\\n  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.x' \\\n  -H 'Content-Type: application/json' \\\n  --data-raw '{\"customerId\":\"c_123\",\"items\":[{\"sku\":\"A-1\",\"qty\":2}],\"note\":\"Leave at door\"}'"
+   },
+   {
+    "id": "target",
+    "label": "Convert to",
+    "kind": "select",
+    "options": [
+     {
+      "value": "fetch",
+      "label": "JavaScript fetch (browser, React, React Native)"
+     },
+     {
+      "value": "axios",
+      "label": "Axios"
+     },
+     {
+      "value": "node-fetch",
+      "label": "Node.js 18+ (fetch, TypeScript)"
+     },
+     {
+      "value": "python",
+      "label": "Python requests"
+     },
+     {
+      "value": "go",
+      "label": "Go net/http"
+     },
+     {
+      "value": "php",
+      "label": "PHP (curl)"
+     },
+     {
+      "value": "java",
+      "label": "Java HttpClient"
+     },
+     {
+      "value": "dart-http",
+      "label": "Dart / Flutter (http)"
+     },
+     {
+      "value": "dart-dio",
+      "label": "Dart / Flutter (dio)"
+     },
+     {
+      "value": "kotlin-okhttp",
+      "label": "Kotlin / Android (OkHttp)"
+     },
+     {
+      "value": "swift",
+      "label": "Swift / iOS (URLSession)"
+     },
+     {
+      "value": "http",
+      "label": "Raw HTTP request"
+     },
+     {
+      "value": "httpie",
+      "label": "HTTPie"
+     }
+    ],
+    "default": "fetch",
+    "width": "narrow"
+   },
+   {
+    "id": "all",
+    "label": "Show every language",
+    "kind": "toggle",
+    "default": false,
+    "width": "narrow"
+   }
+  ],
+  "examples": [
+   {
+    "label": "JSON POST with a bearer token",
+    "values": {
+     "curl": "curl 'https://api.example.com/v1/orders?status=open' \\\n  -X POST \\\n  -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.e30.x' \\\n  -H 'Content-Type: application/json' \\\n  --data-raw '{\"customerId\":\"c_123\",\"items\":[{\"sku\":\"A-1\",\"qty\":2}],\"note\":\"Leave at door\"}'"
+    }
+   },
+   {
+    "label": "File upload (multipart) with basic auth",
+    "values": {
+     "curl": "curl -u admin:s3cret -F 'file=@./report.pdf' -F 'title=Q3 report' https://files.example.com/upload",
+     "target": "dart-http"
+    }
+   },
+   {
+    "label": "Form login with redirects",
+    "values": {
+     "curl": "curl -L -X POST https://example.com/login -d 'username=ada' -d 'password=hunter2' -c cookies.txt",
+     "target": "python"
+    }
+   },
+   {
+    "label": "GET with query from -G",
+    "values": {
+     "curl": "curl -G https://api.example.com/search --data-urlencode 'q=coffee near me' -d limit=10 -H 'Accept: application/json'",
+     "target": "swift"
+    }
+   }
+  ],
+  "actions": []
+ },
+ {
+  "id": "web.api-response",
+  "command": "apiResponseInspector",
+  "title": "API Response Inspector",
+  "summary": "Paste a raw HTTP response (or just the body): pretty-printed body, headers, status meaning, pagination, caching and error hints, and a field list.",
+  "keywords": [
+   "http response",
+   "headers",
+   "status code",
+   "rest",
+   "curl -i",
+   "pagination",
+   "cache-control"
+  ],
+  "icon": "api",
+  "live": true,
+  "network": false,
+  "fields": [
+   {
+    "id": "raw",
+    "label": "Response",
+    "kind": "code",
+    "language": "http",
+    "rows": 12,
+    "required": true,
+    "fromEditor": true,
+    "default": "HTTP/1.1 429 Too Many Requests\nContent-Type: application/json\nRetry-After: 30\nX-RateLimit-Remaining: 0\n\n{\"error\": {\"code\": \"rate_limited\", \"message\": \"Slow down\"}, \"requestId\": \"req_123\"}"
+   }
+  ],
+  "examples": [],
+  "actions": []
+ },
+ {
+  "id": "web.url",
+  "command": "urlTools",
+  "title": "URL & Query String Tool",
+  "summary": "Break a URL into parts and decoded query parameters (with double-encoding and leaked-token checks), build a correctly encoded URL, or convert query strings to and from nested JSON.",
+  "guide": "Query ↔ JSON uses the bracket convention of qs / Express / Rails / PHP: a[b]=1&tags[]=x → {\"a\":{\"b\":\"1\"},\"tags\":[\"x\"]}. Encoding uses encodeURIComponent plus the characters RFC 3986 reserves.",
+  "keywords": [
+   "url parser",
+   "query string",
+   "query params",
+   "urlencode",
+   "search params",
+   "qs",
+   "decode url",
+   "percent encoding"
+  ],
+  "icon": "link",
+  "live": true,
+  "network": false,
+  "fields": [
+   {
+    "id": "mode",
+    "label": "Tool",
+    "kind": "select",
+    "options": [
+     {
+      "value": "parse",
+      "label": "Parse a URL"
+     },
+     {
+      "value": "build",
+      "label": "Build a URL"
+     },
+     {
+      "value": "qs-json",
+      "label": "Query string → JSON"
+     },
+     {
+      "value": "json-qs",
+      "label": "JSON → query string"
+     }
+    ],
+    "default": "parse",
+    "width": "narrow"
+   },
+   {
+    "id": "url",
+    "label": "URL",
+    "kind": "textarea",
+    "rows": 3,
+    "required": true,
+    "fromEditor": true,
+    "default": "https://shop.example.com:8443/api/v2/products/42?sort=price&tags[]=red&tags[]=sale&q=caf%C3%A9+latte&access_token=abc123#reviews",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "parse"
+     ]
+    }
+   },
+   {
+    "id": "base",
+    "label": "Base URL",
+    "kind": "text",
+    "default": "https://api.example.com/v1/search",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "params",
+    "label": "Parameters (key=value per line, -key removes)",
+    "kind": "textarea",
+    "rows": 6,
+    "default": "q=coffee & cake\ncity=São Paulo\nredirect=https://app.example.com/cb?x=1\npage=2",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "query",
+    "label": "Query string",
+    "kind": "textarea",
+    "rows": 4,
+    "default": "filter[status]=active&filter[age][gte]=18&sort=-createdAt&fields[]=name&fields[]=email&page=2",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "qs-json"
+     ]
+    }
+   },
+   {
+    "id": "json",
+    "label": "JSON object",
+    "kind": "code",
+    "language": "json",
+    "rows": 8,
+    "default": "{\n  \"filter\": { \"status\": \"active\", \"age\": { \"gte\": 18 } },\n  \"fields\": [\"name\", \"email\"],\n  \"page\": 2\n}",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "json-qs"
+     ]
+    }
+   },
+   {
+    "id": "arrayFormat",
+    "label": "Arrays as",
+    "kind": "select",
+    "options": [
+     {
+      "value": "brackets",
+      "label": "tags[]=a&tags[]=b"
+     },
+     {
+      "value": "indices",
+      "label": "tags[0]=a&tags[1]=b"
+     },
+     {
+      "value": "repeat",
+      "label": "tags=a&tags=b"
+     },
+     {
+      "value": "comma",
+      "label": "tags=a,b"
+     }
+    ],
+    "default": "brackets",
+    "width": "narrow",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "json-qs"
+     ]
+    }
+   }
+  ],
+  "examples": [],
+  "actions": []
+ },
+ {
+  "id": "web.cors",
+  "command": "corsHelper",
+  "title": "CORS Builder & Debugger",
+  "summary": "Generate correct CORS config for Express, NestJS, Next.js, Fastify, nginx and FastAPI; check response headers the way the browser does; or paste a console error to learn the cause and fix.",
+  "guide": "CORS is enforced by browsers only. Native mobile apps, curl and server-to-server calls ignore it, which is why an API can work in Postman and fail in the browser. With credentials (cookies), the allowed origin must be exact - never *.",
+  "keywords": [
+   "cors",
+   "access-control-allow-origin",
+   "preflight",
+   "options",
+   "blocked by cors policy",
+   "credentials",
+   "cross-origin"
+  ],
+  "icon": "shield",
+  "live": false,
+  "network": false,
+  "fields": [
+   {
+    "id": "mode",
+    "label": "Tool",
+    "kind": "select",
+    "options": [
+     {
+      "value": "build",
+      "label": "Generate config"
+     },
+     {
+      "value": "check",
+      "label": "Check response headers"
+     },
+     {
+      "value": "explain",
+      "label": "Explain a console error"
+     }
+    ],
+    "default": "build",
+    "width": "narrow"
+   },
+   {
+    "id": "origins",
+    "label": "Allowed origins (one per line, * wildcard for subdomains)",
+    "kind": "textarea",
+    "rows": 3,
+    "default": "http://localhost:3000\nhttps://app.example.com\nhttps://*.preview.example.com",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "methods",
+    "label": "Methods",
+    "kind": "text",
+    "default": "GET, POST, PUT, PATCH, DELETE",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "headers",
+    "label": "Allowed request headers",
+    "kind": "text",
+    "default": "Content-Type, Authorization, X-Request-Id",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "expose",
+    "label": "Exposed response headers",
+    "kind": "text",
+    "default": "X-Total-Count",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "credentials",
+    "label": "Allow credentials (cookies)",
+    "kind": "toggle",
+    "default": true,
+    "width": "narrow",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build",
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "maxAge",
+    "label": "Preflight cache (s)",
+    "kind": "number",
+    "default": 600,
+    "width": "narrow",
+    "min": 0,
+    "max": 86400,
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "build"
+     ]
+    }
+   },
+   {
+    "id": "origin",
+    "label": "Page origin",
+    "kind": "text",
+    "default": "http://localhost:3000",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "method",
+    "label": "Request method",
+    "kind": "select",
+    "options": [
+     {
+      "value": "GET",
+      "label": "GET"
+     },
+     {
+      "value": "POST",
+      "label": "POST"
+     },
+     {
+      "value": "PUT",
+      "label": "PUT"
+     },
+     {
+      "value": "PATCH",
+      "label": "PATCH"
+     },
+     {
+      "value": "DELETE",
+      "label": "DELETE"
+     }
+    ],
+    "default": "GET",
+    "width": "narrow",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "requestHeaders",
+    "label": "Request headers (comma separated)",
+    "kind": "text",
+    "default": "Content-Type: application/json, Authorization",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "preflightStatus",
+    "label": "Preflight status",
+    "kind": "number",
+    "default": 204,
+    "width": "narrow",
+    "min": 100,
+    "max": 599,
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "response",
+    "label": "Response headers",
+    "kind": "code",
+    "language": "http",
+    "rows": 7,
+    "default": "HTTP/1.1 204 No Content\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Methods: GET, POST\nAccess-Control-Allow-Headers: Content-Type",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "check"
+     ]
+    }
+   },
+   {
+    "id": "error",
+    "label": "Console error",
+    "kind": "textarea",
+    "rows": 4,
+    "default": "Access to fetch at 'https://api.example.com/v1/me' from origin 'http://localhost:3000' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "explain"
+     ]
+    }
+   }
+  ],
+  "examples": [],
+  "actions": []
+ },
+ {
+  "id": "web.openapi",
+  "command": "openApiTools",
+  "title": "OpenAPI / Swagger Toolkit",
+  "summary": "Paste an OpenAPI 3.x or Swagger 2.0 spec (JSON or YAML) to list and lint endpoints, generate TypeScript types, a typed fetch client and cURL examples - or create a spec from sample JSON.",
+  "guide": "Lint checks the mistakes that break code generators and docs: undeclared path parameters, duplicate operationIds, missing responses and unresolved $refs. The client uses fetch, so it works in browsers, React Native, Node 18+ and edge runtimes.",
+  "keywords": [
+   "openapi",
+   "swagger",
+   "api docs",
+   "typescript client",
+   "codegen",
+   "openapi to typescript",
+   "api spec",
+   "yaml"
+  ],
+  "icon": "doc",
+  "live": false,
+  "network": false,
+  "fields": [
+   {
+    "id": "mode",
+    "label": "Generate",
+    "kind": "select",
+    "options": [
+     {
+      "value": "endpoints",
+      "label": "Endpoints & lint"
+     },
+     {
+      "value": "types",
+      "label": "TypeScript types"
+     },
+     {
+      "value": "client",
+      "label": "TypeScript fetch client"
+     },
+     {
+      "value": "curl",
+      "label": "cURL examples"
+     },
+     {
+      "value": "from-sample",
+      "label": "Spec from sample JSON"
+     }
+    ],
+    "default": "endpoints",
+    "width": "narrow"
+   },
+   {
+    "id": "spec",
+    "label": "OpenAPI document",
+    "kind": "code",
+    "language": "yaml",
+    "rows": 16,
+    "required": true,
+    "fromEditor": true,
+    "default": "openapi: 3.1.0\ninfo:\n  title: Orders API\n  version: 1.2.0\nservers:\n  - url: https://api.example.com/v1\nsecurity:\n  - bearerAuth: []\npaths:\n  /orders:\n    get:\n      operationId: listOrders\n      summary: List orders\n      parameters:\n        - name: status\n          in: query\n          schema: { type: string, enum: [open, paid, shipped] }\n        - name: limit\n          in: query\n          schema: { type: integer, default: 20 }\n      responses:\n        \"200\":\n          description: A page of orders\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  items: { type: array, items: { $ref: \"#/components/schemas/Order\" } }\n                  total: { type: integer }\n    post:\n      operationId: createOrder\n      requestBody:\n        required: true\n        content:\n          application/json:\n            schema: { $ref: \"#/components/schemas/NewOrder\" }\n      responses:\n        \"201\":\n          description: Created\n          content:\n            application/json:\n              schema: { $ref: \"#/components/schemas/Order\" }\n  /orders/{orderId}:\n    get:\n      operationId: getOrder\n      parameters:\n        - name: orderId\n          in: path\n          required: true\n          schema: { type: string }\n      responses:\n        \"200\":\n          description: The order\n          content:\n            application/json:\n              schema: { $ref: \"#/components/schemas/Order\" }\n        \"404\":\n          description: Not found\ncomponents:\n  securitySchemes:\n    bearerAuth: { type: http, scheme: bearer }\n  schemas:\n    NewOrder:\n      type: object\n      required: [customerId, items]\n      properties:\n        customerId: { type: string }\n        items:\n          type: array\n          items:\n            type: object\n            required: [sku, qty]\n            properties:\n              sku: { type: string }\n              qty: { type: integer, minimum: 1 }\n        note: { type: string, nullable: true }\n    Order:\n      allOf:\n        - $ref: \"#/components/schemas/NewOrder\"\n        - type: object\n          required: [id, status, createdAt]\n          properties:\n            id: { type: string, format: uuid }\n            status: { type: string, enum: [open, paid, shipped] }\n            createdAt: { type: string, format: date-time }\n",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "endpoints",
+      "types",
+      "client",
+      "curl"
+     ]
+    }
+   },
+   {
+    "id": "method",
+    "label": "Method",
+    "kind": "select",
+    "options": [
+     {
+      "value": "POST",
+      "label": "POST"
+     },
+     {
+      "value": "GET",
+      "label": "GET"
+     },
+     {
+      "value": "PUT",
+      "label": "PUT"
+     },
+     {
+      "value": "PATCH",
+      "label": "PATCH"
+     },
+     {
+      "value": "DELETE",
+      "label": "DELETE"
+     }
+    ],
+    "default": "POST",
+    "width": "narrow",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "from-sample"
+     ]
+    }
+   },
+   {
+    "id": "path",
+    "label": "Path",
+    "kind": "text",
+    "width": "narrow",
+    "default": "/users/{id}/orders",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "from-sample"
+     ]
+    }
+   },
+   {
+    "id": "status",
+    "label": "Status",
+    "kind": "text",
+    "width": "narrow",
+    "default": "201",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "from-sample"
+     ]
+    }
+   },
+   {
+    "id": "requestJson",
+    "label": "Request body (JSON, optional)",
+    "kind": "code",
+    "language": "json",
+    "rows": 6,
+    "default": "{\n  \"sku\": \"A-1\",\n  \"qty\": 2\n}",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "from-sample"
+     ]
+    }
+   },
+   {
+    "id": "responseJson",
+    "label": "Response body (JSON)",
+    "kind": "code",
+    "language": "json",
+    "rows": 6,
+    "default": "{\n  \"id\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"sku\": \"A-1\",\n  \"qty\": 2,\n  \"createdAt\": \"2026-01-15T09:30:00Z\"\n}",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "from-sample"
+     ]
+    }
+   }
+  ],
+  "examples": [],
+  "actions": []
+ },
+ {
+  "id": "web.graphql",
+  "command": "graphqlTools",
+  "title": "GraphQL Formatter & Types",
+  "summary": "Format or minify GraphQL queries, list their operations and variables, build the JSON request body, cURL and fetch calls - or turn a schema (SDL) into TypeScript types.",
+  "keywords": [
+   "graphql",
+   "gql",
+   "format graphql",
+   "prettify",
+   "apollo",
+   "sdl",
+   "schema to typescript",
+   "variables"
+  ],
+  "icon": "network",
+  "live": true,
+  "network": false,
+  "fields": [
+   {
+    "id": "mode",
+    "label": "Tool",
+    "kind": "select",
+    "options": [
+     {
+      "value": "query",
+      "label": "Query: format & request"
+     },
+     {
+      "value": "sdl",
+      "label": "Schema (SDL) → TypeScript"
+     }
+    ],
+    "default": "query",
+    "width": "narrow"
+   },
+   {
+    "id": "query",
+    "label": "Query / mutation",
+    "kind": "code",
+    "language": "graphql",
+    "rows": 10,
+    "required": true,
+    "fromEditor": true,
+    "default": "query GetUser($id: ID!, $first: Int = 10) { user(id: $id) { id name email\n posts(first: $first, orderBy: {field: CREATED_AT, direction: DESC}) { edges { node { id title tags } } pageInfo { hasNextPage endCursor } }\n ...ProfileFields } }\nfragment ProfileFields on User { avatarUrl(size: 128) bio }",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "query"
+     ]
+    }
+   },
+   {
+    "id": "endpoint",
+    "label": "Endpoint",
+    "kind": "text",
+    "default": "https://api.example.com/graphql",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "query"
+     ]
+    }
+   },
+   {
+    "id": "sdl",
+    "label": "Schema (SDL)",
+    "kind": "code",
+    "language": "graphql",
+    "rows": 14,
+    "fromEditor": true,
+    "default": "\"A registered user\"\ntype User implements Node {\n  id: ID!\n  email: String!\n  name: String\n  role: Role!\n  posts(first: Int = 10): [Post!]!\n}\n\ninterface Node { id: ID! }\n\ntype Post implements Node {\n  id: ID!\n  title: String!\n  tags: [String!]\n  author: User!\n}\n\nenum Role { ADMIN EDITOR VIEWER }\n\ninput CreatePostInput {\n  title: String!\n  tags: [String!]\n}\n\nunion SearchResult = User | Post\nscalar DateTime",
+    "showIf": {
+     "field": "mode",
+     "equals": [
+      "sdl"
+     ]
+    }
+   }
+  ],
+  "examples": [],
+  "actions": []
+ },
+ {
+  "id": "web.api-scaffold",
+  "command": "apiScaffolder",
+  "title": "API Resource Scaffolder",
+  "summary": "Describe a resource and its fields; get a validated CRUD API (paginated list, get, create, update, delete) for Express, NestJS, Next.js, Fastify, Spring Boot, ASP.NET Core Web API or FastAPI.",
+  "guide": "Field syntax: name: type, one per line. Types: string, text, int, number, boolean, date, email, url, uuid, enum(a|b|c), string[], number[], json. Add ! for required and unique for a unique index. id, createdAt and updatedAt are added for you. Spring Boot uses JPA and Bean Validation, ASP.NET Core uses EF Core and data annotations, FastAPI uses SQLAlchemy 2 and Pydantic v2; each rejects invalid input (400; FastAPI uses its standard 422), returns 404 for a missing record and 409 for a duplicate unique value.",
+  "keywords": [
+   "crud",
+   "rest api",
+   "express",
+   "nestjs",
+   "next.js api",
+   "fastify",
+   "prisma",
+   "mongoose",
+   "zod",
+   "class-validator",
+   "spring boot",
+   "jpa",
+   "rest controller",
+   "asp.net core",
+   "web api",
+   "ef core",
+   "fastapi",
+   "sqlalchemy",
+   "pydantic",
+   "scaffold",
+   "boilerplate"
+  ],
+  "icon": "server",
+  "live": false,
+  "network": false,
+  "fields": [
+   {
+    "id": "resource",
+    "label": "Resource (singular)",
+    "kind": "text",
+    "width": "narrow",
+    "default": "product",
+    "required": true
+   },
+   {
+    "id": "framework",
+    "label": "Framework",
+    "kind": "select",
+    "options": [
+     {
+      "value": "express",
+      "label": "Express + Zod"
+     },
+     {
+      "value": "nestjs",
+      "label": "NestJS + class-validator"
+     },
+     {
+      "value": "next",
+      "label": "Next.js route handlers + Zod"
+     },
+     {
+      "value": "fastify",
+      "label": "Fastify + JSON Schema"
+     },
+     {
+      "value": "spring",
+      "label": "Spring Boot + JPA"
+     },
+     {
+      "value": "aspnet",
+      "label": "ASP.NET Core Web API + EF Core"
+     },
+     {
+      "value": "fastapi",
+      "label": "FastAPI + SQLAlchemy"
+     }
+    ],
+    "default": "express",
+    "width": "narrow"
+   },
+   {
+    "id": "db",
+    "label": "Database",
+    "kind": "select",
+    "options": [
+     {
+      "value": "prisma",
+      "label": "Prisma (Postgres / MySQL / SQLite)"
+     },
+     {
+      "value": "mongoose",
+      "label": "MongoDB (Mongoose)"
+     },
+     {
+      "value": "memory",
+      "label": "In-memory (prototype)"
+     }
+    ],
+    "default": "prisma",
+    "width": "narrow",
+    "showIf": {
+     "field": "framework",
+     "equals": [
+      "express",
+      "nestjs",
+      "next",
+      "fastify"
+     ]
+    }
+   },
+   {
+    "id": "sqlDb",
+    "label": "Database",
+    "kind": "select",
+    "options": [
+     {
+      "value": "postgres",
+      "label": "PostgreSQL"
+     },
+     {
+      "value": "mysql",
+      "label": "MySQL"
+     },
+     {
+      "value": "sqlserver",
+      "label": "SQL Server"
+     },
+     {
+      "value": "sqlite",
+      "label": "SQLite (H2 for Spring Boot)"
+     }
+    ],
+    "default": "postgres",
+    "width": "narrow",
+    "showIf": {
+     "field": "framework",
+     "equals": [
+      "spring",
+      "aspnet",
+      "fastapi"
+     ]
+    }
+   },
+   {
+    "id": "packageName",
+    "label": "Base package",
+    "kind": "text",
+    "width": "narrow",
+    "default": "com.example.demo",
+    "showIf": {
+     "field": "framework",
+     "equals": [
+      "spring"
+     ]
+    }
+   },
+   {
+    "id": "namespace",
+    "label": "Root namespace",
+    "kind": "text",
+    "width": "narrow",
+    "default": "MyApi",
+    "showIf": {
+     "field": "framework",
+     "equals": [
+      "aspnet"
+     ]
+    }
+   },
+   {
+    "id": "fields",
+    "label": "Fields",
+    "kind": "textarea",
+    "rows": 8,
+    "required": true,
+    "default": "name: string!\nslug: string! unique\ndescription: text\nprice: number!\nstock: int!\nstatus: enum(draft|active|archived)!\ntags: string[]\nimageUrl: url"
+   }
+  ],
+  "examples": [
+   {
+    "label": "Spring Boot: orders",
+    "values": {
+     "resource": "order",
+     "framework": "spring",
+     "sqlDb": "postgres",
+     "packageName": "com.example.shop",
+     "fields": "customerEmail: email!\nreference: string! unique\ntotal: number!\nstatus: enum(pending|paid|shipped)!\nnotes: text"
+    }
+   },
+   {
+    "label": "ASP.NET Core: customers",
+    "values": {
+     "resource": "customer",
+     "framework": "aspnet",
+     "sqlDb": "sqlserver",
+     "namespace": "Shop.Api",
+     "fields": "name: string!\nemail: email! unique\nbirthDate: date\nactive: boolean!"
+    }
+   },
+   {
+    "label": "FastAPI: articles",
+    "values": {
+     "resource": "article",
+     "framework": "fastapi",
+     "sqlDb": "sqlite",
+     "fields": "title: string!\nslug: string! unique\nbody: text!\npublished: boolean!\ntags: string[]"
+    }
+   }
+  ],
+  "actions": []
+ }
+]

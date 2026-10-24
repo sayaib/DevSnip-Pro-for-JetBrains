@@ -2,7 +2,7 @@
 
 ## [0.1.0] - 2026-10-24
 
-First preview: the REST API client from DevSnip Pro for VS Code.
+First preview: the REST API client and the Backend & API toolkit from DevSnip Pro for VS Code.
 
 ### Added
 - REST and GraphQL requests with params, headers, and JSON, text or form bodies.
@@ -11,3 +11,5 @@ First preview: the REST API client from DevSnip Pro for VS Code.
 - Response status, time, size, headers and formatted JSON, plus plain-language diagnosis of network, TLS and timeout errors.
 - Retries with backoff, redirect limits, timeouts, proxy and SSL verification options, session cookies.
 - cURL import and export; request history with JSON and CSV export.
+- The rest of the Backend & API section, with output identical to VS Code: cURL Converter, API Response Inspector, URL & Query String Tool, CORS Builder & Debugger, OpenAPI / Swagger Toolkit, GraphQL Formatter & Types and API Resource Scaffolder.
+- Tools | DevSnip Pro: Backend & API menu.

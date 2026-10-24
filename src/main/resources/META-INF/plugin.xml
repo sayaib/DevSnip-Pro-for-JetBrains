@@ -1,6 +1,6 @@
 <idea-plugin>
     <id>pro.devsnip.api</id>
-    <name>DevSnip Pro: REST API Client</name>
+    <name>DevSnip Pro: API Client &amp; Backend Toolkit</name>
     <vendor url="https://devsnip.pro">Sayaib Sarkar</vendor>
 
     <description><![CDATA[
@@ -14,15 +14,35 @@
       <li>Retries with backoff, redirect limits, timeouts, proxy and SSL options, cookies</li>
       <li>cURL import and export, request history with JSON and CSV export</li>
     </ul>
-    <p>Open it from <b>View | Tool Windows | DevSnip API</b>.</p>
+    <p>Plus the rest of the Backend &amp; API toolkit:</p>
+    <ul>
+      <li><b>cURL Converter</b>: cURL to fetch, Axios, Node, Python, Go, PHP, Java, Dart, Kotlin/OkHttp, Swift, raw HTTP and HTTPie</li>
+      <li><b>API Response Inspector</b>: status meaning, pagination, rate limits, caching hints and a field list</li>
+      <li><b>URL &amp; Query String Tool</b>: parse, build and encode URLs; query strings to and from nested JSON</li>
+      <li><b>CORS Builder &amp; Debugger</b>: config for Express, NestJS, Next.js, Fastify, nginx and FastAPI; browser-accurate checks</li>
+      <li><b>OpenAPI / Swagger Toolkit</b>: lint, TypeScript types, a typed fetch client, cURL examples, spec from samples</li>
+      <li><b>GraphQL Formatter &amp; Types</b>: format, minify, request bodies, SDL to TypeScript</li>
+      <li><b>API Resource Scaffolder</b>: CRUD APIs for Express, NestJS, Next.js, Fastify, Spring Boot, ASP.NET Core and FastAPI</li>
+    </ul>
+    <p>Open it from <b>View | Tool Windows | DevSnip Pro</b> or <b>Tools | DevSnip Pro: Backend &amp; API</b>.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow id="DevSnip API"
+        <toolWindow id="DevSnip Pro"
                     anchor="right"
                     icon="/icons/devsnipApi.svg"
                     factoryClass="pro.devsnip.api.ide.ui.ApiToolWindowFactory"/>
     </extensions>
+
+    <actions>
+        <group id="DevSnipPro.BackendApi"
+               class="pro.devsnip.api.ide.ui.BackendApiActionGroup"
+               text="DevSnip Pro: Backend &amp; API"
+               description="Open a DevSnip Pro Backend &amp; API tool"
+               popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </group>
+    </actions>
 </idea-plugin>

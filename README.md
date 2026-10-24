@@ -1,13 +1,16 @@
-# DevSnip Pro for JetBrains: REST API Client (prototype)
+# DevSnip Pro for JetBrains: API Client & Backend Toolkit
 
 A JetBrains IDE plugin that ports the **backend and API module** of the
 [DevSnip Pro VS Code extension](https://github.com/sayaib/DevSnip-Pro): its
 HTTP request engine, authentication, request/response processing, error
-diagnosis, environments, cURL import/export and request history. It adds a
-compact **DevSnip API** tool window to test APIs from the IDE.
+diagnosis, environments, cURL import/export and request history. It also ports
+the rest of the extension's **Backend & API** section: cURL Converter, API
+Response Inspector, URL & Query String Tool, CORS Builder & Debugger,
+OpenAPI / Swagger Toolkit, GraphQL Formatter & Types and API Resource
+Scaffolder. Everything lives in the **DevSnip Pro** tool window, one tab per
+tool, and under **Tools | DevSnip Pro: Backend & API**.
 
-This is a first prototype. It covers only the API client. The VS Code
-extension is not modified.
+The VS Code extension is not modified.
 
 ## What the audit found
 
@@ -39,7 +42,34 @@ same `User-Agent`, the same error texts and the same redaction rules. There
 is no second backend: each behaviour is implemented once, in `core/`, which
 has no IntelliJ dependency.
 
-## Features
+## Backend & API toolkit
+
+These seven tools are ports of the VS Code extension's toolkit
+(`src/toolkits/`). They run locally and never call the network.
+
+| Tool | What it does | Ported from |
+|---|---|---|
+| cURL Converter | cURL (bash, cmd, browser "Copy as cURL") to fetch, Axios, Node, Python, Go, PHP, Java, Dart http/dio, Kotlin OkHttp, Swift, raw HTTP and HTTPie | `engines/web-curl.ts` |
+| API Response Inspector | Raw HTTP response or body: status meaning, pagination, rate limits, content-type problems, field list | `engines/data-inspect.ts` |
+| URL & Query String Tool | Parse URLs (leaked tokens, double encoding), build encoded URLs, query string to and from nested JSON | `engines/web-http.ts` |
+| CORS Builder & Debugger | Config for Express, NestJS, Next.js, Fastify, nginx and FastAPI; a browser-accurate header check; console error explainer | `engines/web-security.ts` |
+| OpenAPI / Swagger Toolkit | Lint endpoints, TypeScript types, a typed fetch client, cURL examples, a spec from sample JSON (YAML or JSON in) | `engines/web-apispec.ts` |
+| GraphQL Formatter & Types | Format and minify, operations and variables, request body, cURL and fetch, SDL to TypeScript | `engines/web-apispec.ts` |
+| API Resource Scaffolder | CRUD APIs for Express, NestJS, Next.js, Fastify (Prisma, Mongoose or memory), Spring Boot, ASP.NET Core and FastAPI | `engines/web-scaffold*.ts` |
+
+Each tab shows the tool's form (with its examples and **Use Editor** to read
+the current selection). Results can be copied, inserted at the caret, saved
+as a file, or, for scaffolds, saved into the project; existing files are
+never overwritten without asking.
+
+**Same results as VS Code.** The tools' fields, defaults and examples are
+exported from the extension's source (`scripts/export-backend-api.js`), and
+`BackendApiParityTest` runs every tool over 256 inputs recorded from the
+extension's own TypeScript. The test requires identical output: same code,
+same messages, same tables. The only allowance is the wording of JSON and
+YAML parser errors, which comes from V8 in VS Code and from the JVM here.
+
+## REST API Client features
 
 - **Requests:** any method, query params and headers tables (rows can be
   disabled), JSON, text, form URL-encoded and GraphQL (query, variables,
@@ -117,7 +147,7 @@ The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.0.zi
 ./gradlew runIde
 ```
 
-This starts a sandbox IntelliJ IDEA with the plugin. Open **View | Tool Windows | DevSnip API**.
+This starts a sandbox IntelliJ IDEA with the plugin. Open **View | Tool Windows | DevSnip Pro**.
 
 ```bash
 ./gradlew verifyPlugin
@@ -200,6 +230,8 @@ contacted. The one exception is a DNS lookup of the reserved
 | `OAuthClientTest` | Each grant's form, Basic client auth, token masking, endpoint errors, input validation |
 | `ApiClientServiceTest` | Secret variables kept out of persisted state, state reload, history without secrets, failures recorded, OAuth token storage |
 | `ApiClientPanelTest` | The real tool window in a headless IDE: Send, Cancel, error diagnosis and Fix button, Copy as cURL, opening history |
+| `BackendApiParityTest` | All seven toolkit tools against 256 results recorded from the VS Code extension (defaults, every mode and example, edge cases, errors) |
+| `ToolPanelTest` | The generic tool panel in a headless IDE: every tool runs its defaults, form input, conditional fields, errors, generated files |
 
 To try it by hand against a local server:
 
@@ -213,10 +245,11 @@ APIs, any local dev server works, or create an environment with
 
 ## Known limitations
 
-- **Not ported yet** (present in the VS Code client): saved request collections,
-  assertions, batch and load runs, SDK and code export, mock generator, security
-  header scan, WebSocket, OpenAPI import and JWT inspection. Also all non-API
-  modules (OSV/SCA scanners, AI/RAG tools, database client, utilities).
+- **Not ported yet** from the VS Code REST client: saved request collections,
+  assertions, batch and load runs, SDK export, mock generator, security
+  header scan, WebSocket and JWT inspection. Other sidebar sections (Auth &
+  security, frontend, database, DevOps, AI/RAG, OSV/SCA scanners) are not ported.
+- Toolkit code outputs are shown as plain monospace text, without syntax highlighting.
 - No multipart/form-data or file-upload bodies. Bodies are text.
 - The JDK HTTP client manages the `Host`, `Connection`, `Content-Length`, `Expect`
   and `Upgrade` headers itself. If you type them, they are skipped with a warning.
@@ -233,6 +266,9 @@ APIs, any local dev server works, or create an environment with
 
 ```
 src/main/kotlin/pro/devsnip/api/core/   Engine (no IntelliJ dependency): models, builder, HTTP, OAuth, cURL, errors, history
+src/main/kotlin/pro/devsnip/api/core/toolkit/  Backend & API toolkit: framework, JS/YAML compatibility, engines, tools
+src/main/resources/toolkit/             Tool metadata exported from the VS Code extension
+scripts/export-backend-api.js           Re-exports metadata and reference results from the VS Code source
 src/main/kotlin/pro/devsnip/api/ide/    Service (state, password safe) and tool window UI
 src/main/resources/META-INF/plugin.xml  Plugin descriptor
 src/test/kotlin/                        Unit, integration and headless IDE tests

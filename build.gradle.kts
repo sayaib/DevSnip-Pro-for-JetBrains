@@ -21,6 +21,8 @@ repositories {
 
 dependencies {
     implementation("com.google.code.gson:gson:2.11.0")
+    // YAML 1.2 parsing for the OpenAPI toolkit (configured for the core schema).
+    implementation("org.yaml:snakeyaml:2.2")
 
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
@@ -54,7 +56,7 @@ intellijPlatform {
         name = "DevSnip Pro: REST API Client"
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
-            <p>First preview: the REST API client from DevSnip Pro for VS Code.</p>
+            <p>First preview: the REST API client and the Backend &amp; API toolkit from DevSnip Pro for VS Code.</p>
             <ul>
               <li>REST and GraphQL requests with params, headers, and JSON, text or form bodies</li>
               <li>Bearer, Basic, API key and OAuth 2.0 authentication</li>
@@ -62,6 +64,7 @@ intellijPlatform {
               <li>Formatted responses with status, timing, size, headers and error diagnosis</li>
               <li>Retries, redirects, timeouts, proxy and SSL options, cookies</li>
               <li>cURL import/export and request history with JSON/CSV export</li>
+              <li>cURL Converter, API Response Inspector, URL &amp; Query String, CORS Builder, OpenAPI Toolkit, GraphQL Formatter and API Resource Scaffolder</li>
             </ul>
         """.trimIndent()
         ideaVersion {

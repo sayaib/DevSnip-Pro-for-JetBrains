@@ -2,8 +2,6 @@ package pro.devsnip.api.ide.ui
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.fileChooser.FileChooserFactory
-import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
@@ -80,7 +78,7 @@ import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableModel
 
 /**
- * The DevSnip API tool window: build a request, send it on a background task,
+ * The REST Client tab of the DevSnip Pro tool window: build a request, send it on a background task,
  * and inspect the status, timing, headers and body, or a diagnosis of why it
  * failed. Every control here calls into [ApiClientService].
  */
@@ -707,11 +705,10 @@ class ApiClientPanel(private val project: Project) : JPanel(BorderLayout()), Dis
 
     private fun exportHistory(csv: Boolean) {
         val extension = if (csv) "csv" else "json"
-        val descriptor = saverDescriptor("Export Request History", "History export (without request bodies or credentials)", extension)
-        val target = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, project).save("devsnip-api-history.$extension") ?: return
+        val file = Files.chooseSaveTarget(project, "Export Request History", "devsnip-api-history.$extension", "History export (without request bodies or credentials)") ?: return
         val content = service.exportHistory(csv)
-        runInBackground("Exporting history", { target.file.writeText(content) }) { result ->
-            result.onSuccess { hint("Exported ${historyModel.size()} entries to ${target.file.name}.") }
+        runInBackground("Exporting history", { file.writeText(content) }) { result ->
+            result.onSuccess { hint("Exported ${historyModel.size()} entries to ${file.name}.") }
                 .onFailure { Messages.showErrorDialog(project, "Could not write the file: ${it.message}", "Export History") }
         }
     }
@@ -792,18 +789,6 @@ class ApiClientPanel(private val project: Project) : JPanel(BorderLayout()), Dis
             in 300..399 -> BLUE
             in 400..499 -> ORANGE
             else -> JBColor.RED
-        }
-
-        /**
-         * 2024.1 only has `FileSaverDescriptor(String, String, String...)`, which newer
-         * platforms deprecate in favour of `(String, String, String)`. Pick whichever
-         * the running IDE has, so the plugin uses no deprecated API on either.
-         */
-        private fun saverDescriptor(title: String, description: String, extension: String): FileSaverDescriptor {
-            val type = FileSaverDescriptor::class.java
-            val string = String::class.java
-            return runCatching { type.getConstructor(string, string, string).newInstance(title, description, extension) }
-                .getOrElse { type.getConstructor(string, string, Array<String>::class.java).newInstance(title, description, arrayOf(extension)) }
         }
 
         private fun codeArea(rows: Int = 10) = JBTextArea(rows, 40).apply {

@@ -33,7 +33,7 @@ class EnvironmentsDialog(project: Project?, initial: List<Environment>) : Dialog
     private var editing: Draft? = null
 
     init {
-        title = "DevSnip API Environments"
+        title = "DevSnip Pro Environments"
         list.addListSelectionListener {
             if (it.valueIsAdjusting) return@addListSelectionListener
             commitEditing()
