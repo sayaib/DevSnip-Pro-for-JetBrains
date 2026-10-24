@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] - 2026-10-25
+
+Compatibility with current IDEs: no deprecated or experimental platform APIs (Plugin Verifier).
+
+### Changed
+- The scanners' "Run in Terminal" fixes run the confirmed command in your shell, in the project folder, as a tab in the Run tool window (output, exit code and Stop). It uses the platform's execution API, the same on every supported IDE, instead of `TerminalToolWindowManager.createShellWidget` (deprecated on 2026.2). The Terminal plugin is no longer an optional dependency. If the shell cannot start, the command is copied with a notification.
+- Workspace trust uses the IDE's public `TrustedProjects.isProjectTrusted(Project)` where it exists, and the older check only on IDEs without it (2024.x), instead of the deprecated and experimental `TrustedProjects.isTrusted`. Unknown trust still counts as untrusted.
+
 ## [0.1.0] - 2026-10-25
 
 First release: DevSnip Pro's look, Tools sidebar and toolkit from VS Code, the REST API client, and the OSV and SCA scanners.

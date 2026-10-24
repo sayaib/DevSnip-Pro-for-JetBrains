@@ -9,7 +9,7 @@ it is not modified.
 ## Install and configure
 
 1. **Install:** *Settings | Plugins | Marketplace*, search for "DevSnip Pro". For a ZIP
-   (`build/distributions/devsnip-pro-jetbrains-0.1.0.zip`): *Settings | Plugins | ⚙ |
+   (`build/distributions/devsnip-pro-jetbrains-0.1.1.zip`): *Settings | Plugins | ⚙ |
    Install Plugin from Disk…*. No restart is needed.
 2. **Open it:** the **DevSnip Pro** tool window (right side), *Tools | DevSnip Pro*, or
    *Find Action* (⌘⇧A / Ctrl+Shift+A) and type "DevSnip Pro: …".
@@ -88,7 +88,8 @@ and the SCA providers (`src/osv`, `src/sca`) are bundled into
   once per project, the extension's read-only `mvn dependency:tree` or
   Gradle init-script listing runs from the project's wrapper or the tool on
   PATH. The IDE refuses any other command or arguments.
-- **Fixes**: "Run in Terminal" (IDE terminal) and "Apply" (an undoable edit
+- **Fixes**: "Run in Terminal" (the command runs in your shell, in the
+  project folder, as a tab in the Run tool window) and "Apply" (an undoable edit
   of the manifest, with a diff preview) only run after the modal
   confirmation, as in VS Code.
 - **Settings**: *Settings | Tools | DevSnip Pro Scanners* holds the
@@ -297,7 +298,7 @@ The same engine behind a Swing UI, for IDEs without the embedded browser:
 ./gradlew buildPlugin
 ```
 
-The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.0.zip`.
+The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.1.zip`.
 
 ```bash
 ./gradlew runIde
@@ -320,18 +321,18 @@ Compatibility: built against platform 241 (2024.1) with Java 17 bytecode,
 
 ## Publishing to JetBrains Marketplace
 
-Verified for this release (0.1.0):
+Verified for this release (0.1.1):
 
-- **Tests:** 127 unit, integration and headless-IDE tests pass (`./gradlew test`), and the webview
+- **Tests:** 129 unit, integration and headless-IDE tests pass (`./gradlew test`), and the webview
   parity suites pass (`cd webview && npm test`: 249 toolkit cases, 50 crypto cross-checks, 4 scanner suites,
   50 REST client feature messages).
-- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15) and 2026.2.3 (IU-262.10968.63).
-  It reports, with no compatibility problems:
-  - `TrustedProjects.isTrusted` (experimental on 2024.1, deprecated on 2026.2): the only trust check on
-    every supported IDE. If a later IDE removes it, the scanners treat the project as untrusted and use
-    their built-in resolver instead of running Maven or Gradle.
-  - `TerminalToolWindowManager.createShellWidget` (deprecated on 2026.2): "Run in Terminal". If it is
-    removed, the command is copied to the clipboard with a notification instead.
+- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15) and 2026.2.3 (IU-262.10968.63),
+  with no deprecated, experimental or internal API usages. Two checks differ by IDE version:
+  - Workspace trust: the public `TrustedProjects.isProjectTrusted(Project)` where the IDE has it, otherwise
+    (2024.x) the older `Project.isTrusted()`, found at run time. If neither is found, the scanners treat the
+    project as untrusted and use their built-in resolver instead of running Maven or Gradle.
+  - "Run in Terminal": the platform's execution API (`RunContentExecutor`), the same on every supported
+    IDE, so the Terminal plugin is not needed.
 - **Structure:** `verifyPluginStructure` passes. The listing assets are `pluginIcon.svg` (and `_dark`),
   change notes, description and `LICENSE` (MIT).
 - **Dynamic plugin:** the platform's own check (`DynamicPlugins.checkCanUnloadWithoutRestart`) allows
@@ -353,7 +354,7 @@ export PRIVATE_KEY_PASSWORD='...'
 ./gradlew signPlugin
 ```
 
-Upload `build/distributions/devsnip-pro-jetbrains-0.1.0-signed.zip` at
+Upload `build/distributions/devsnip-pro-jetbrains-0.1.1-signed.zip` at
 [plugins.jetbrains.com](https://plugins.jetbrains.com) → your profile → **Add new plugin**.
 Choose the MIT license and add the source URL. JetBrains reviews new plugins before they are listed, which usually takes a few working days.
 

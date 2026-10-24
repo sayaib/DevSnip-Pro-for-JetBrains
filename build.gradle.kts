@@ -26,8 +26,6 @@ dependencies {
 
     intellijPlatform {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
-        // Optional: the scanners run confirmed fix commands in the IDE's terminal.
-        bundledPlugin("org.jetbrains.plugins.terminal")
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -58,7 +56,12 @@ intellijPlatform {
         // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
-            <p>First release: DevSnip Pro's look, Tools sidebar, themes and toolkit from VS Code, the REST API client and the OSV and SCA scanners.</p>
+            <p><b>0.1.1</b>: compatibility with current IDEs.</p>
+            <ul>
+              <li>The scanners' "Run in Terminal" fixes now run in the Run tool window (output, exit code and Stop), using the IDE's own execution API instead of the Terminal plugin's deprecated one; the Terminal plugin is no longer a dependency</li>
+              <li>Workspace trust uses the IDE's public trust API where the IDE has it, instead of the deprecated, experimental one</li>
+            </ul>
+            <p><b>0.1.0</b>: first release: DevSnip Pro's look, Tools sidebar, themes and toolkit from VS Code, the REST API client and the OSV and SCA scanners.</p>
             <ul>
               <li>The Tools sidebar with 13 sections, search, favourites, recents and the 13 DevSnip themes (System Default follows the IDE theme)</li>
               <li>100 toolkit tools for backend, frontend, mobile, text, converters, database, testing, Git, DevOps, security, AI &amp; ML and RAG work, each in Find Action and Tools | DevSnip Pro</li>

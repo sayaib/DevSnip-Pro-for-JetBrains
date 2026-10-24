@@ -11,7 +11,6 @@ import com.intellij.diff.DiffManager
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.ide.BrowserUtil
-import com.intellij.ide.impl.isTrusted
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationAction
@@ -80,10 +79,10 @@ import java.util.zip.InflaterInputStream
  *  - build tools: only the extension's read-only Maven `dependency:tree` and
  *    Gradle init-script runs, from the project's wrapper or the tool on PATH,
  *    in a trusted project;
- *  - dialogs, editors, diffs, the terminal, the clipboard, the password safe.
+ *  - dialogs, editors, diffs, commands in the Run tool window, the clipboard, the password safe.
  *
- * Running a command in the terminal and changing a project file need the
- * user's confirmation in a modal dialog first (the extension asks for it).
+ * Running a command and changing a project file need the user's
+ * confirmation in a modal dialog first (the extension asks for it).
  */
 class ScannerHost(private val project: Project, val page: String, private val post: (JsonElement) -> Unit) : Disposable {
     private val workspaceRoot: Path? = project.guessProjectDir()?.takeIf { it.isInLocalFileSystem }?.let { normalize(Path.of(it.path)) }
@@ -500,15 +499,16 @@ class ScannerHost(private val project: Project, val page: String, private val po
         }
     }
 
-    /** The extension's "Run in Terminal": only a command the user just confirmed, in a project folder. */
+    /** The extension's "Run in Terminal": only a command the user just confirmed, in a project folder, shown in the Run tool window. */
     private fun runInTerminal(name: String, cwd: String, command: String) {
         require(confirmation.consume { it.contains(command) }) { "The command was not confirmed." }
         val dir = if (cwd.isEmpty()) workspaceRoot else pathOf(cwd)
         require(dir != null && under(dir, workspaceRoot) && Files.isDirectory(dir)) { "Commands run in the project's folders only." }
-        // Without the Terminal plugin (an optional dependency) DevSnipTerminal cannot load, and the command is copied instead.
-        if (runCatching { DevSnipTerminal.run(project, dir.toString(), name, command) }.isSuccess) return
-        CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(command))
-        Notifications.Bus.notify(Notification(NOTIFICATIONS, "DevSnip Pro", "The Terminal plugin is not available, so the command was copied. Run it in ${dir.fileName}.", NotificationType.INFORMATION), project)
+        // If the shell cannot start, the command is copied so it can be run by hand.
+        DevSnipCommandRunner.run(project, dir, name, command) { error ->
+            CopyPasteManager.getInstance().setContents(java.awt.datatransfer.StringSelection(command))
+            Notifications.Bus.notify(Notification(NOTIFICATIONS, "DevSnip Pro", "The command could not start (${error.message}), so it was copied. Run it in ${dir.fileName}.", NotificationType.WARNING), project)
+        }
     }
 
     private inner class ProgressTask(title: String) : Task.Backgroundable(project, title, false) {
@@ -533,8 +533,8 @@ class ScannerHost(private val project: Project, val page: String, private val po
 
     // ------------------------------------------------------- project state
 
-    /** Workspace trust (the extension's vscode.workspace.isTrusted). The one trust API on every supported IDE; newer ones deprecate it. */
-    private fun isTrusted(): Boolean = runCatching { project.isTrusted() }.getOrDefault(false)
+    /** Workspace trust (the extension's vscode.workspace.isTrusted). */
+    private fun isTrusted(): Boolean = ProjectTrust.isTrusted(project)
 
     private fun workspaceState(): JsonObject = runCatching {
         PropertiesComponent.getInstance(project).getValue(STATE_KEY)?.let { JsonParser.parseString(it).asJsonObject }

@@ -7,8 +7,12 @@ import com.google.gson.JsonPrimitive
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.openapi.util.Disposer
+import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.ide.impl.isTrusted
 import pro.devsnip.api.core.MockServer
+import pro.devsnip.api.ide.web.DevSnipCommandRunner
 import pro.devsnip.api.ide.web.DevSnipUiState
+import pro.devsnip.api.ide.web.ProjectTrust
 import pro.devsnip.api.ide.web.ScannerHost
 import pro.devsnip.api.ide.web.ScannerSettings
 import pro.devsnip.api.ide.web.WebviewAssets
@@ -229,6 +233,33 @@ class ScannerHostTest : BasePlatformTestCase() {
         assertTrue(confirmation.consume { it.contains("npm install lodash@4.17.21") })
         // Without a confirmation, nothing runs in the terminal.
         assertNotNull(call("terminal.run", params("name" to "x", "cwd" to "", "command" to "echo hi"))["error"])
+    }
+
+    fun `test a confirmed command runs in the user's shell in the project folder`() {
+        val output = CapturingProcessHandler(DevSnipCommandRunner.shell("echo devsnip-ok").withWorkDirectory(sandbox.toFile())).runProcess(30_000)
+        assertEquals(0, output.exitCode)
+        assertEquals("devsnip-ok", output.stdout.trim())
+
+        // End to end: the command runs in the given folder and its tab opens in the Run tool window.
+        val marker = sandbox.resolve("ran.txt")
+        var failure: Exception? = null
+        var tab: com.intellij.openapi.Disposable? = null
+        DevSnipCommandRunner.run(project, sandbox, "DevSnip Pro test", "echo hi > ran.txt", onShown = { tab = it }) { failure = it }
+        val deadline = System.currentTimeMillis() + 15_000
+        while ((tab == null || !Files.isRegularFile(marker)) && failure == null && System.currentTimeMillis() < deadline) {
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+            Thread.sleep(10)
+        }
+        assertNull(failure)
+        assertTrue("the command ran", Files.isRegularFile(marker))
+        assertNotNull("the Run tab opened", tab)
+        Disposer.dispose(tab!!)
+    }
+
+    fun `test the trust check answers as the IDE's own trust API does`() {
+        // The test IDE (2024.1) has only the older API, so this checks the fallback; newer IDEs use the public one.
+        assertEquals(project.isTrusted(), ProjectTrust.isTrusted(project))
+        assertEquals(ProjectTrust.isTrusted(project), host.hostInfo()["trusted"].asBoolean)
     }
 
     fun `test the page gets the settings VS Code would have and the IDE's facts`() {
