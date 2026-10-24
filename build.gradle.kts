@@ -56,7 +56,7 @@ intellijPlatform {
         name = "DevSnip Pro: REST API Client"
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
-            <p>First preview: the REST API client and the Backend &amp; API toolkit from DevSnip Pro for VS Code.</p>
+            <p>First preview: DevSnip Pro's look, Tools sidebar, themes and 100 toolkit tools from VS Code, plus the REST API client.</p>
             <ul>
               <li>REST and GraphQL requests with params, headers, and JSON, text or form bodies</li>
               <li>Bearer, Basic, API key and OAuth 2.0 authentication</li>

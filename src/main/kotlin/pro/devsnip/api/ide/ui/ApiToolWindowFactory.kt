@@ -1,26 +1,32 @@
 package pro.devsnip.api.ide.ui
 
-import com.intellij.openapi.actionSystem.ActionGroup
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
-import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.ContentFactory
+import com.intellij.ui.jcef.JBCefApp
+import pro.devsnip.api.ide.web.DevSnipSidebarPanel
 import pro.devsnip.api.core.toolkit.BackendApiTools
 
 /**
- * The DevSnip Pro tool window: the "Backend & API" section of the VS Code
- * sidebar, one tab per tool, starting with the REST API Client.
+ * The DevSnip Pro tool window: the extension's Tools sidebar (in the IDE's
+ * embedded browser). Without JCEF it falls back to native tabs for the REST
+ * API Client and the natively ported Backend & API tools.
  */
 class ApiToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val factory = ContentFactory.getInstance()
+        if (JBCefApp.isSupported()) {
+            // The DevSnip Pro sidebar, as in VS Code; tools open as editor tabs.
+            val content = factory.createContent(null, "", false)
+            content.component = DevSnipSidebarPanel(project, content)
+            toolWindow.contentManager.addContent(content)
+            return
+        }
+        // Fallback for IDEs without the embedded browser: the natively ported tools as tabs.
         val client = ApiClientPanel(project)
         factory.createContent(client, REST_CLIENT_TAB, false).also {
             Disposer.register(it, client)
@@ -59,29 +65,4 @@ class ApiToolWindowFactory : ToolWindowFactory, DumbAware {
             }
         }
     }
-}
-
-/** Tools | DevSnip Pro: Backend & API: opens any of the tools. */
-class BackendApiActionGroup : ActionGroup(), DumbAware {
-    private val children: Array<AnAction> by lazy {
-        val entries = listOf(ApiToolWindowFactory.REST_CLIENT_TAB to "REST API Client") +
-            BackendApiTools.all.map { (ApiToolWindowFactory.TAB_NAMES[it.id] ?: it.title) to it.title }
-        entries.map { (tab, title) ->
-            object : DumbAwareAction(title) {
-                override fun actionPerformed(e: AnActionEvent) {
-                    e.project?.let { ApiToolWindowFactory.open(it, tab) }
-                }
-
-                override fun update(e: AnActionEvent) {
-                    e.presentation.isEnabled = e.project != null
-                }
-
-                override fun getActionUpdateThread() = ActionUpdateThread.BGT
-            }
-        }.toTypedArray()
-    }
-
-    override fun getChildren(e: AnActionEvent?): Array<AnAction> = children
-
-    override fun getActionUpdateThread() = ActionUpdateThread.BGT
 }

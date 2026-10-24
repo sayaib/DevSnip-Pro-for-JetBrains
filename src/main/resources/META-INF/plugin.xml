@@ -1,11 +1,13 @@
 <idea-plugin>
     <id>pro.devsnip.api</id>
-    <name>DevSnip Pro: API Client &amp; Backend Toolkit</name>
+    <name>DevSnip Pro: API Client &amp; Developer Toolkit</name>
     <vendor url="https://devsnip.pro">Sayaib Sarkar</vendor>
 
     <description><![CDATA[
-    <p>A REST and GraphQL API client inside the IDE, ported from the
-    <a href="https://github.com/sayaib/DevSnip-Pro">DevSnip Pro</a> VS Code extension.</p>
+    <p>DevSnip Pro for JetBrains IDEs, with the same look, Tools sidebar and themes as the
+    <a href="https://github.com/sayaib/DevSnip-Pro">DevSnip Pro</a> VS Code extension:
+    a REST and GraphQL API client and 100 developer tools for backend, frontend, mobile,
+    DevOps, security, AI &amp; ML and RAG work. Everything runs locally.</p>
     <ul>
       <li>Send HTTP requests with params, headers and JSON, text, form or GraphQL bodies</li>
       <li>Bearer, Basic, API key (header or query) and OAuth 2.0 token authentication</li>
@@ -14,7 +16,7 @@
       <li>Retries with backoff, redirect limits, timeouts, proxy and SSL options, cookies</li>
       <li>cURL import and export, request history with JSON and CSV export</li>
     </ul>
-    <p>Plus the rest of the Backend &amp; API toolkit:</p>
+    <p>Highlights from the toolkit:</p>
     <ul>
       <li><b>cURL Converter</b>: cURL to fetch, Axios, Node, Python, Go, PHP, Java, Dart, Kotlin/OkHttp, Swift, raw HTTP and HTTPie</li>
       <li><b>API Response Inspector</b>: status meaning, pagination, rate limits, caching hints and a field list</li>
@@ -24,24 +26,30 @@
       <li><b>GraphQL Formatter &amp; Types</b>: format, minify, request bodies, SDL to TypeScript</li>
       <li><b>API Resource Scaffolder</b>: CRUD APIs for Express, NestJS, Next.js, Fastify, Spring Boot, ASP.NET Core and FastAPI</li>
     </ul>
-    <p>Open it from <b>View | Tool Windows | DevSnip Pro</b> or <b>Tools | DevSnip Pro: Backend &amp; API</b>.</p>
+    <p>Open the <b>DevSnip Pro</b> tool window, use <b>Tools | DevSnip Pro</b>, or find any tool with
+    <b>Find Action</b> (“DevSnip Pro: …”).</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <fileEditorProvider implementation="pro.devsnip.api.ide.web.DevSnipEditorProvider"/>
+        <postStartupActivity implementation="pro.devsnip.api.ide.web.DevSnipActionsRegistrar"/>
         <toolWindow id="DevSnip Pro"
                     anchor="right"
                     icon="/icons/devsnipApi.svg"
                     factoryClass="pro.devsnip.api.ide.ui.ApiToolWindowFactory"/>
     </extensions>
 
+    <applicationListeners>
+        <listener class="pro.devsnip.api.ide.web.DevSnipThemeListener" topic="com.intellij.ide.ui.LafManagerListener"/>
+        <listener class="pro.devsnip.api.ide.web.DevSnipThemeListener" topic="com.intellij.openapi.editor.colors.EditorColorsListener"/>
+    </applicationListeners>
+
     <actions>
-        <group id="DevSnipPro.BackendApi"
-               class="pro.devsnip.api.ide.ui.BackendApiActionGroup"
-               text="DevSnip Pro: Backend &amp; API"
-               description="Open a DevSnip Pro Backend &amp; API tool"
-               popup="true">
+        <group id="DevSnipPro.ToolsMenu" text="DevSnip Pro" description="DevSnip Pro tools" popup="true" icon="/icons/devsnipApi.svg">
+            <action id="DevSnipPro.ShowSidebar" class="pro.devsnip.api.ide.web.ShowSidebarAction" text="Show Tools Sidebar" description="Open the DevSnip Pro Tools sidebar"/>
+            <separator/>
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </group>
     </actions>

@@ -5,6 +5,8 @@
 First preview: the REST API client and the Backend & API toolkit from DevSnip Pro for VS Code.
 
 ### Added
+- The DevSnip Pro look and Tools sidebar from VS Code, in the IDE's embedded browser: 13 sections, search, filters, favourites, recents and the 13 DevSnip themes (System Default follows the IDE theme).
+- 100 toolkit tools across Web & Frontend, Mobile, Text, Converters, Database, Testing, Git, DevOps, Security, AI & ML and Data & RAG, running the extension's own code; every tool in Find Action and Tools | DevSnip Pro.
 - REST and GraphQL requests with params, headers, and JSON, text or form bodies.
 - Bearer, Basic, API key (header or query) and OAuth 2.0 authentication (client credentials, password and refresh token grants).
 - Environments with `{{variables}}`; secret variables and OAuth tokens are stored in the IDE password safe.

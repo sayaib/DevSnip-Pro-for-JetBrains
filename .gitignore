@@ -5,3 +5,6 @@ build/
 .intellijPlatform/
 .kotlin/
 out/
+node_modules/
+.build/
+.claude/

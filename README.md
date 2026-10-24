@@ -1,16 +1,69 @@
-# DevSnip Pro for JetBrains: API Client & Backend Toolkit
+# DevSnip Pro for JetBrains
 
-A JetBrains IDE plugin that ports the **backend and API module** of the
-[DevSnip Pro VS Code extension](https://github.com/sayaib/DevSnip-Pro): its
-HTTP request engine, authentication, request/response processing, error
-diagnosis, environments, cURL import/export and request history. It also ports
-the rest of the extension's **Backend & API** section: cURL Converter, API
-Response Inspector, URL & Query String Tool, CORS Builder & Debugger,
-OpenAPI / Swagger Toolkit, GraphQL Formatter & Types and API Resource
-Scaffolder. Everything lives in the **DevSnip Pro** tool window, one tab per
-tool, and under **Tools | DevSnip Pro: Backend & API**.
+DevSnip Pro for IntelliJ IDEA and the other JetBrains IDEs, with the same
+look, sidebar and tools as the
+[DevSnip Pro VS Code extension](https://github.com/sayaib/DevSnip-Pro). The
+VS Code extension is the single source of truth for the UI and the toolkit;
+it is not modified.
 
-The VS Code extension is not modified.
+## How it looks and works like the VS Code extension
+
+DevSnip Pro's UI in VS Code is a set of webviews (HTML, CSS and JavaScript)
+styled with VS Code's theme variables and DevSnip's own themes. The plugin
+shows **those same pages** in the IDE's embedded Chromium (JCEF):
+
+- **Tools sidebar** (tool window *DevSnip Pro*): the extension's own sidebar
+  page with its 14 sections, search (⌘K / Ctrl+K), filters, favourites,
+  recently and most used, hover cards and the theme picker.
+- **Tools** open as editor tabs, as VS Code opens them as panels: the
+  extension's toolkit workbench (form, presets, Use editor, live results,
+  stats, outputs with Copy / Insert / Open / Save / Save as / Write to
+  workspace).
+- **Themes**: *System Default* follows the IDE theme (IntelliJ colours are
+  mapped onto the `--vscode-*` variables the pages use, live on theme change);
+  the 12 DevSnip themes (Dark, Midnight, Dracula, Monokai, Nord, Cyberpunk,
+  Solarized, Ember, Synthwave, Aurora, Light, High Contrast) restyle every
+  open page at once.
+- **Same tool code**: the ~100 toolkit tools run the extension's own
+  TypeScript, bundled for the browser. Node's `crypto` is provided by a
+  shim (`webview/shims/crypto.js`); `webview/test/parity.mjs` checks every tool
+  (249 cases) and 50 key/certificate cross-checks against real Node: all match.
+- **IDE conventions**: every tool is in *Find Action* / *Search Everywhere*
+  ("DevSnip Pro: …") and under *Tools | DevSnip Pro*; files are written
+  through the IDE (undoable, with an overwrite prompt); links open in the
+  system browser.
+- **Without JCEF** (rare: some remote setups) the tool window falls back to
+  native Swing tabs: the REST API Client and the seven natively ported
+  Backend & API tools.
+
+### Available now
+
+| Section | Tools |
+|---|---|
+| Backend & API | REST API Client, cURL Converter, API Response Inspector, URL & Query String, CORS Builder & Debugger, OpenAPI / Swagger Toolkit, GraphQL Formatter & Types, API Resource Scaffolder |
+| Web & Frontend, Mobile, Text & Formatters, Encoders & Converters, Database (helpers), Testing & Debugging, Git, DevOps & Cloud, Security & Auth, AI & ML, Data & RAG | every toolkit tool of the section (100 tools in total) |
+
+### Not ported yet (hidden from the sidebar until they are)
+
+Host features that need IDE-side code: OSV Vulnerability Scanner, SCA
+Scanner, Workspace Security Audit, Endpoint Security Scan, Dependency &
+Config Check, Cloud & Container Audit, Database Client, CSV / Excel viewers,
+Saved / Framework Snippets, Insert / Clean Debug Logs, Remove Unused Imports,
+Dependencies & Installation, README Manager, OpenCode Integration, and
+Milestones & rewards (the sidebar's rank card is hidden; all DevSnip themes
+are available). The REST API Client opens as the native client (below), not
+yet as the extension's webview.
+
+### Rebuilding the pages from the VS Code extension
+
+```bash
+cd webview && npm install && npm run build && npm test
+```
+
+`npm run build` exports the sidebar and tool pages, data, themes, codicons and
+the toolkit bundle from `../../DevSnip-Pro` (or `DEVSNIP_VSCODE_REPO`) into
+`src/main/resources/webview`; `npm test` runs the Node parity checks.
+Building the plugin itself does not need Node.
 
 ## What the audit found
 
@@ -273,3 +326,11 @@ src/main/kotlin/pro/devsnip/api/ide/    Service (state, password safe) and tool 
 src/main/resources/META-INF/plugin.xml  Plugin descriptor
 src/test/kotlin/                        Unit, integration and headless IDE tests
 ```
+
+## Third-party components
+
+Bundled in the plugin: Gson (Apache-2.0), SnakeYAML (Apache-2.0); in the
+webview resources: VS Code Codicons (font CC BY 4.0, code MIT), node-forge
+(BSD-3-Clause), @noble/hashes and @noble/curves (MIT), buffer (MIT),
+path-browserify (MIT), yaml (ISC). Licence notices of bundled JavaScript are
+kept at the end of `toolkit-runtime.js`.
