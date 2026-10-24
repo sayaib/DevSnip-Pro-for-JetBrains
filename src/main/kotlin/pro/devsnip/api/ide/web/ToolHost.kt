@@ -118,7 +118,7 @@ class ToolHost(private val project: Project, private val toolId: String, private
     private fun openInEditor(text: String, language: String) {
         val ext = EXTENSIONS[language] ?: "txt"
         val file = LightVirtualFile("${WebviewAssets.toolTitle(toolId)}.$ext", FileTypeManager.getInstance().getFileTypeByExtension(ext), text)
-        FileEditorManager.getInstance(project).openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     // -------------------------------------------------------------- files
@@ -165,7 +165,7 @@ class ToolHost(private val project: Project, private val toolId: String, private
                 vf
             }
         }
-        FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, written.first()), true)
+        OpenFileDescriptor(project, written.first()).navigate(true)
         val appended = targets.count { it.append && it.exists }
         val text = if (targets.size == 1) "${if (appended > 0) "Appended to" else "Wrote"} ${targets[0].path}."
         else "Wrote ${targets.size} files: ${targets.take(6).joinToString(", ") { it.path }}${if (targets.size > 6) "…" else ""}."

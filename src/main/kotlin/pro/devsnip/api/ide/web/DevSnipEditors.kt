@@ -14,6 +14,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorPolicy
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -23,12 +24,12 @@ import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import com.intellij.ui.jcef.JBCefApp
-import pro.devsnip.api.ide.ApiClientService
-import pro.devsnip.api.ide.ui.ApiClientPanel
 import java.beans.PropertyChangeListener
 import java.io.File
 import javax.swing.Icon
 import javax.swing.JComponent
+import pro.devsnip.api.ide.ApiClientService
+import pro.devsnip.api.ide.ui.ApiClientPanel
 
 /** Marks DevSnip Pro pages opened as editor tabs (VS Code opens tools as webview panels). */
 object DevSnipFileType : FileType {
@@ -60,7 +61,7 @@ object DevSnipPages {
         val manager = FileEditorManager.getInstance(project)
         val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.TOOL && it.toolId == toolId }
         if (existing != null) {
-            manager.openFile(existing, true)
+            OpenFileDescriptor(project, existing).navigate(true)
             if (initial != null && initial.size() > 0) {
                 manager.getEditors(existing).filterIsInstance<ToolPageEditor>().firstOrNull()?.setValues(initial)
             }
@@ -68,20 +69,20 @@ object DevSnipPages {
         }
         val file = DevSnipVirtualFile(DevSnipVirtualFile.Kind.TOOL, toolId, WebviewAssets.toolTitle(toolId))
         if (initial != null) file.initial = initial
-        manager.openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     /** Opens (or focuses) the OSV ("osv") or SCA ("sca") scanner. */
     fun openScanner(project: Project, page: String) {
         val manager = FileEditorManager.getInstance(project)
         val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.SCANNER && it.toolId == page }
-        manager.openFile(existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.SCANNER, page, WebviewAssets.scannerTitle(page)), true)
+        OpenFileDescriptor(project, existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.SCANNER, page, WebviewAssets.scannerTitle(page))).navigate(true)
     }
 
     fun openRestClient(project: Project) {
         val manager = FileEditorManager.getInstance(project)
         val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.REST_CLIENT }
-        manager.openFile(existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.REST_CLIENT, "rest-client", "REST API Client"), true)
+        OpenFileDescriptor(project, existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.REST_CLIENT, "rest-client", "REST API Client")).navigate(true)
     }
 }
 

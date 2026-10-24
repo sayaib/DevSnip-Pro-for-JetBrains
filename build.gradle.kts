@@ -56,6 +56,10 @@ intellijPlatform {
         // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
+            <p><b>0.1.2</b>: compatibility with IntelliJ IDEA 2026.3.</p>
+            <ul>
+              <li>Tabs, generated files and saved reports open through APIs that are current on 2026.3 (no deprecated or scheduled-for-removal calls); nothing changes in how they open</li>
+            </ul>
             <p><b>0.1.1</b>: compatibility with current IDEs.</p>
             <ul>
               <li>The scanners' "Run in Terminal" fixes now run in the Run tool window (output, exit code and Stop), using the IDE's own execution API instead of the Terminal plugin's deprecated one; the Terminal plugin is no longer a dependency</li>
@@ -92,11 +96,13 @@ intellijPlatform {
         channels = providers.environmentVariable("PUBLISH_CHANNEL").map { listOf(it) }.orElse(listOf("default"))
     }
 
-    // ./gradlew verifyPlugin checks binary compatibility with the oldest and a current IDE.
+    // ./gradlew verifyPlugin checks binary compatibility with the oldest IDE, a current one and the EAP.
     pluginVerification {
         ides {
             create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
             create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
+            // The Marketplace also verifies against the current EAP.
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "263.7307.44")
         }
     }
 }

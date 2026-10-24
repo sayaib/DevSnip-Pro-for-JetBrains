@@ -398,7 +398,7 @@ class ToolPanel(private val project: Project, private val tool: ToolDefinition) 
         val target = Files.chooseSaveTarget(project, "Save ${descriptor.title} Output", name) ?: return
         try {
             target.writeText(content)
-            VfsUtil.findFileByIoFile(target, true)?.let { FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, it), true) }
+            VfsUtil.findFileByIoFile(target, true)?.let { OpenFileDescriptor(project, it).navigate(true) }
         } catch (e: Exception) {
             Messages.showErrorDialog(project, "Could not write the file: ${e.message}", descriptor.title)
         }
@@ -428,7 +428,7 @@ class ToolPanel(private val project: Project, private val tool: ToolDefinition) 
                     target
                 }
             }
-            written.firstOrNull()?.let { FileEditorManager.getInstance(project).openTextEditor(OpenFileDescriptor(project, it), true) }
+            written.firstOrNull()?.let { OpenFileDescriptor(project, it).navigate(true) }
             Messages.showInfoMessage(project, "Saved ${written.size} file${if (written.size == 1) "" else "s"} under ${base.presentableUrl}.", descriptor.title)
         } catch (e: Exception) {
             Messages.showErrorDialog(project, "Could not save the files: ${e.message}", descriptor.title)

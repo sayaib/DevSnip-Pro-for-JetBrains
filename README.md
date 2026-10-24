@@ -9,7 +9,7 @@ it is not modified.
 ## Install and configure
 
 1. **Install:** *Settings | Plugins | Marketplace*, search for "DevSnip Pro". For a ZIP
-   (`build/distributions/devsnip-pro-jetbrains-0.1.1.zip`): *Settings | Plugins | ⚙ |
+   (`build/distributions/devsnip-pro-jetbrains-0.1.2.zip`): *Settings | Plugins | ⚙ |
    Install Plugin from Disk…*. No restart is needed.
 2. **Open it:** the **DevSnip Pro** tool window (right side), *Tools | DevSnip Pro*, or
    *Find Action* (⌘⇧A / Ctrl+Shift+A) and type "DevSnip Pro: …".
@@ -298,7 +298,7 @@ The same engine behind a Swing UI, for IDEs without the embedded browser:
 ./gradlew buildPlugin
 ```
 
-The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.1.zip`.
+The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.2.zip`.
 
 ```bash
 ./gradlew runIde
@@ -321,13 +321,14 @@ Compatibility: built against platform 241 (2024.1) with Java 17 bytecode,
 
 ## Publishing to JetBrains Marketplace
 
-Verified for this release (0.1.1):
+Verified for this release (0.1.2):
 
 - **Tests:** 129 unit, integration and headless-IDE tests pass (`./gradlew test`), and the webview
   parity suites pass (`cd webview && npm test`: 249 toolkit cases, 50 crypto cross-checks, 4 scanner suites,
   50 REST client feature messages).
-- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15) and 2026.2.3 (IU-262.10968.63),
-  with no deprecated, experimental or internal API usages. Two checks differ by IDE version:
+- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15), 2026.2.3 (IU-262.10968.63)
+  and the 2026.3 EAP (IU-263.7307.44), with no deprecated, scheduled-for-removal, experimental or internal
+  API usages. Two checks differ by IDE version:
   - Workspace trust: the public `TrustedProjects.isProjectTrusted(Project)` where the IDE has it, otherwise
     (2024.x) the older `Project.isTrusted()`, found at run time. If neither is found, the scanners treat the
     project as untrusted and use their built-in resolver instead of running Maven or Gradle.
@@ -354,7 +355,7 @@ export PRIVATE_KEY_PASSWORD='...'
 ./gradlew signPlugin
 ```
 
-Upload `build/distributions/devsnip-pro-jetbrains-0.1.1-signed.zip` at
+Upload `build/distributions/devsnip-pro-jetbrains-0.1.2-signed.zip` at
 [plugins.jetbrains.com](https://plugins.jetbrains.com) → your profile → **Add new plugin**.
 Choose the MIT license and add the source URL. JetBrains reviews new plugins before they are listed, which usually takes a few working days.
 

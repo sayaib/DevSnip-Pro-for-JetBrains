@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2] - 2026-10-25
+
+Compatibility with IntelliJ IDEA 2026.3 EAP: no deprecated or scheduled-for-removal platform APIs (Plugin Verifier, 263.7307.44).
+
+### Changed
+- Tool, scanner and REST API Client tabs, generated files, logs and saved output open through `OpenFileDescriptor.navigate`, instead of `FileEditorManager.openFile(VirtualFile, boolean)` and `FileEditorManager.openTextEditor(...)` (deprecated on 2026.3). They open and focus exactly as before.
+- A saved scanner report opens in the browser by its `file:` URL, instead of `BrowserUtil.browse(File)` (scheduled for removal).
+- The Plugin Verifier also checks the 2026.3 EAP.
+
 ## [0.1.1] - 2026-10-25
 
 Compatibility with current IDEs: no deprecated or experimental platform APIs (Plugin Verifier).

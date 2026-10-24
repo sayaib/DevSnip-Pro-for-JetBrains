@@ -494,7 +494,7 @@ class ScannerHost(private val project: Project, val page: String, private val po
             url.startsWith("file://") -> {
                 val path = normalize(Path.of(URI(url)))
                 require(saveTargets.contains(path)) { "Only reports you saved can be opened." }
-                BrowserUtil.browse(path.toFile())
+                BrowserUtil.browse(path.toUri().toString())
             }
         }
     }
@@ -799,6 +799,6 @@ object ScannerLogs {
         manager.openFiles.filter { it is LightVirtualFile && it.name == name }.forEach(manager::closeFile)
         val file = LightVirtualFile(name, PlainTextFileType.INSTANCE, text(channel).ifEmpty { "Nothing logged yet. Run a scan first.\n" })
         file.isWritable = false
-        manager.openFile(file, true)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 }
