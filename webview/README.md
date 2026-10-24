@@ -10,7 +10,12 @@ codicons) and its toolkit code for the plugin's embedded browser.
 - `src/bridge.js`: `acquireVsCodeApi()` and the tool context, talking to the IDE.
 - `shims/`: `crypto`, `os` and `vscode` for the browser bundle and the exporter.
 - `test/parity.mjs`: every tool on real Node vs. the browser bundle, plus
-  JWT/certificate cross-checks.
+  JWT/certificate cross-checks; then `test/scanners.mjs`.
+- `src/scanner-runtime.js`: the OSV and SCA scanners (the extension's panels,
+  engine and providers) for the page; `shims/vscode-browser.js`, `node-fs.js`,
+  `node-child_process.js` and `src/scanner-fetch.js` hand their I/O to the IDE.
+- `test/scanners.mjs`: both scanners in a browser-like context vs. the
+  extension's engine on Node, on `test/fixtures` (fabricated advisories, no network).
 
 ```bash
 npm install

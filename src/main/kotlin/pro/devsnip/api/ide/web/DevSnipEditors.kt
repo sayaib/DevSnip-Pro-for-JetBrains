@@ -31,7 +31,7 @@ object DevSnipFileType : FileType {
 
 /** A DevSnip Pro page: a toolkit tool, or the REST API Client. */
 class DevSnipVirtualFile(val kind: Kind, val toolId: String, title: String) : LightVirtualFile(title, DevSnipFileType, "") {
-    enum class Kind { TOOL, REST_CLIENT }
+    enum class Kind { TOOL, REST_CLIENT, SCANNER }
 
     /** Field values to start with (from "Run on selection" or an alias). */
     var initial: JsonObject = JsonObject()
@@ -60,6 +60,13 @@ object DevSnipPages {
         manager.openFile(file, true)
     }
 
+    /** Opens (or focuses) the OSV ("osv") or SCA ("sca") scanner. */
+    fun openScanner(project: Project, page: String) {
+        val manager = FileEditorManager.getInstance(project)
+        val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.SCANNER && it.toolId == page }
+        manager.openFile(existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.SCANNER, page, WebviewAssets.scannerTitle(page)), true)
+    }
+
     fun openRestClient(project: Project) {
         val manager = FileEditorManager.getInstance(project)
         val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.REST_CLIENT }
@@ -75,6 +82,7 @@ class DevSnipEditorProvider : FileEditorProvider, DumbAware {
         return when (page.kind) {
             DevSnipVirtualFile.Kind.TOOL -> ToolPageEditor(project, page)
             DevSnipVirtualFile.Kind.REST_CLIENT -> PanelEditor(page, "REST API Client") { parent -> ApiClientPanel(project).also { Disposer.register(parent, it) } }
+            DevSnipVirtualFile.Kind.SCANNER -> ScannerPageEditor(project, page)
         }
     }
 
@@ -139,6 +147,25 @@ class ToolPageEditor(private val project: Project, private val file: DevSnipVirt
         }
         return out
     }
+}
+
+/** The OSV or SCA scanner: the extension's own page and panel code, with the IDE doing its I/O. */
+class ScannerPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEditorBase(file, WebviewAssets.scannerTitle(file.toolId)) {
+    private val browser: DevSnipBrowser = DevSnipBrowser(this, "panel") { message -> host.handle(message) }
+    private val host: ScannerHost = ScannerHost(project, file.toolId) { browser.post(it) }
+
+    init {
+        Disposer.register(this, host)
+        browser.load(WebviewAssets.scannerHtml(file.toolId, DevSnipUiState.getInstance(), host.hostInfo(), browser.queryFunction))
+    }
+
+    // The extension tells a hidden panel's result with a notification instead.
+    override fun selectNotify() = host.setVisible(true)
+    override fun deselectNotify() = host.setVisible(false)
+
+    override fun getComponent(): JComponent = browser.component
+    override fun getPreferredFocusedComponent(): JComponent = browser.component
+    override fun dispose() = Unit
 }
 
 /** A Swing panel (the REST API Client) in a tab. */

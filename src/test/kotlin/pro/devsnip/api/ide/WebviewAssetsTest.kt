@@ -35,7 +35,9 @@ class WebviewAssetsTest : BasePlatformTestCase() {
         val data = WebviewAssets.sidebarData(state)
         val commands = data.getAsJsonArray("groups").flatMap { g -> g.asJsonObject.getAsJsonArray("tools").map { it.asJsonObject["command"].asString } }
         assertEquals("every supported command appears once", WebviewAssets.supportedCommands, commands.toSet())
-        assertEquals(101, commands.size) // 100 toolkit tools and the REST API Client
+        assertEquals(103, commands.size) // 100 toolkit tools, the OSV and SCA scanners and the REST API Client
+        assertTrue(WebviewAssets.COMMAND_PREFIX + "osvScanner" in commands)
+        assertTrue(WebviewAssets.COMMAND_PREFIX + "scaScanner" in commands)
         // 13 of the 14 sections: Spreadsheets & CSV only has host features that are not ported yet.
         assertEquals(13, data.getAsJsonArray("groups").size())
         for (name in listOf("tools-sidebar.js", "bridge.js", "codicon.css", "codicon.ttf")) assertTrue(Files.exists(WebviewAssets.directory.resolve(name)))
@@ -58,7 +60,7 @@ class WebviewAssetsTest : BasePlatformTestCase() {
     fun `test the IDE theme provides every VS Code variable the pages use`() {
         // Variables the pages read (DevSnip themes also define many, which needs no IDE value).
         val used = Regex("var\\((--vscode-[A-Za-z0-9-]+)").findAll(
-            listOf("sidebar.html", "tool.html", "tools-sidebar.js", "toolkit.js", "themes.json").joinToString("\n") { name ->
+            listOf("sidebar.html", "tool.html", "tools-sidebar.js", "toolkit.js", "themes.json", "osv.html", "sca.html", "osv-scanner.js", "sca-scanner.js").joinToString("\n") { name ->
                 javaClass.getResourceAsStream("/webview/$name")!!.use { String(it.readBytes()) }
             },
         ).map { it.groupValues[1] }.toSet()

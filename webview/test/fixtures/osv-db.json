@@ -1,0 +1,37 @@
+{
+  "note": "Fabricated advisories for the JetBrains port's offline tests. Not real OSV data.",
+  "records": [
+    {
+      "id": "GHSA-test-0001-lodash", "modified": "2026-01-01T00:00:00Z", "published": "2025-01-01T00:00:00Z",
+      "summary": "Test advisory: prototype pollution in lodash", "details": "Fixture record for offline tests.",
+      "aliases": ["CVE-2099-0001"],
+      "database_specific": { "severity": "HIGH", "cwe_ids": ["CWE-1321"] },
+      "affected": [{ "package": { "name": "lodash", "ecosystem": "npm" }, "ranges": [{ "type": "SEMVER", "events": [{ "introduced": "0" }, { "fixed": "4.17.21" }] }] }],
+      "references": [{ "type": "ADVISORY", "url": "https://example.invalid/advisory/0001" }]
+    },
+    {
+      "id": "GHSA-test-0002-requests", "modified": "2026-01-01T00:00:00Z", "published": "2025-01-01T00:00:00Z",
+      "summary": "Test advisory: credential leak in requests", "details": "Fixture record for offline tests.",
+      "aliases": ["CVE-2099-0002"],
+      "severity": [{ "type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" }],
+      "affected": [{ "package": { "name": "requests", "ecosystem": "PyPI" }, "ranges": [{ "type": "ECOSYSTEM", "events": [{ "introduced": "0" }, { "fixed": "2.20.0" }] }] }]
+    },
+    {
+      "id": "GHSA-test-0003-jinja2", "modified": "2026-01-01T00:00:00Z", "published": "2025-01-01T00:00:00Z",
+      "summary": "Test advisory: sandbox escape in jinja2", "details": "Fixture record for offline tests.",
+      "database_specific": { "severity": "MODERATE" },
+      "affected": [{ "package": { "name": "jinja2", "ecosystem": "PyPI" }, "ranges": [{ "type": "ECOSYSTEM", "events": [{ "introduced": "0" }, { "fixed": "2.10.1" }] }] }]
+    },
+    {
+      "id": "GHSA-test-0004-jackson", "modified": "2026-01-01T00:00:00Z", "published": "2025-01-01T00:00:00Z",
+      "summary": "Test advisory: deserialization in jackson-databind", "details": "Fixture record for offline tests.",
+      "aliases": ["CVE-2099-0004"],
+      "database_specific": { "severity": "CRITICAL" },
+      "affected": [{ "package": { "name": "com.fasterxml.jackson.core:jackson-databind", "ecosystem": "Maven" }, "ranges": [{ "type": "ECOSYSTEM", "events": [{ "introduced": "2.9.0" }, { "fixed": "2.9.10.8" }] }] }]
+    }
+  ],
+  "kev": {
+    "title": "Fixture KEV catalog", "catalogVersion": "2099.01.01", "dateReleased": "2099-01-01T00:00:00Z", "count": 1,
+    "vulnerabilities": [{ "cveID": "CVE-2099-0004", "vendorProject": "Fixture", "product": "jackson-databind", "vulnerabilityName": "Fixture", "dateAdded": "2099-01-01", "shortDescription": "Fixture", "requiredAction": "Update", "dueDate": "2099-02-01", "knownRansomwareCampaignUse": "Unknown" }]
+  }
+}

@@ -59,6 +59,42 @@ await build({
   logLevel: "warning"
 });
 
+// 1b. The OSV and SCA scanners: the extension's panels, engine and providers, with the
+// VS Code and Node APIs they use served by the IDE (shims/vscode-browser.js and friends).
+const scannerStubs = {
+  name: "devsnip-scanner-stubs",
+  setup(b) {
+    // Analytics, onboarding and the theme service stay in VS Code; the IDE does their part.
+    b.onResolve({ filter: /^\.\.\/(analytics|onboarding\/activation|theme\/service)$/ }, () => ({ path: shim("scanner-stubs.js") }));
+  }
+};
+await build({
+  entryPoints: [path.join(here, "src/scanner-runtime.js")],
+  outfile: path.join(out, "scanner-runtime.js"),
+  bundle: true,
+  format: "iife",
+  platform: "browser",
+  target: "chrome110",
+  minify: true,
+  legalComments: "eof",
+  nodePaths: [repoModules, path.join(here, "node_modules")],
+  plugins: [scannerStubs],
+  alias: {
+    "@devsnip": src,
+    crypto: shim("crypto.js"),
+    os: shim("os.js"),
+    fs: shim("node-fs.js"),
+    child_process: shim("node-child_process.js"),
+    path: shim("scanner-path.js"),
+    "node:path": shim("scanner-path.js"),
+    "path-browserify": path.join(here, "node_modules/path-browserify"),
+    vscode: shim("vscode-browser.js")
+  },
+  inject: [shim("scanner-globals.js")],
+  define: { "process.env.NODE_ENV": '"production"', global: "globalThis" },
+  logLevel: "warning"
+});
+
 // 2. Shells, data and themes, rendered by the extension's own code on Node.
 const exporter = path.join(here, ".build/export.cjs");
 await build({
@@ -75,7 +111,7 @@ await build({
 execFileSync(process.execPath, [exporter, out], { stdio: "inherit" });
 
 // 3. The pages' own scripts and the codicon font, unchanged.
-for (const file of ["tools-sidebar.js", "toolkit.js"]) fs.copyFileSync(path.join(repo, "media", file), path.join(out, file));
+for (const file of ["tools-sidebar.js", "toolkit.js", "osv-scanner.js", "sca-scanner.js", "sca-model.js"]) fs.copyFileSync(path.join(repo, "media", file), path.join(out, file));
 const codicons = path.join(repoModules, "@vscode/codicons/dist");
 fs.copyFileSync(path.join(codicons, "codicon.css"), path.join(out, "codicon.css"));
 fs.copyFileSync(path.join(codicons, "codicon.ttf"), path.join(out, "codicon.ttf"));

@@ -13,6 +13,12 @@ import { themeChoices } from "@devsnip/theme/service";
 import { injectTheme, themeMessage } from "@devsnip/theme/inject";
 import { THEMES, SYSTEM_THEME_ID } from "@devsnip/theme/themes";
 import { NAV, COMMAND_PREFIX } from "@devsnip/toolkits/layout";
+import { renderOsvPage } from "@devsnip/osv/page";
+import { renderScaPage } from "@devsnip/sca/page";
+import { OSV_SCANNER_COMMAND } from "@devsnip/osv/command";
+import { SCA_SCANNER_COMMAND } from "@devsnip/sca/command";
+import { treeArguments } from "@devsnip/osv/maven/cli";
+import { gradleArguments, INIT_SCRIPT } from "@devsnip/osv/gradle/cli";
 
 const out = process.argv[2];
 fs.mkdirSync(out, { recursive: true });
@@ -67,6 +73,25 @@ for (const tool of ALL_TOOLS) {
 }
 write("tool.html", toolShell);
 write("tools.json", JSON.stringify(tools));
+
+// ---- OSV and SCA scanner pages ------------------------------------------------
+// Each render has a fresh nonce; it is made a fixed value (the IDE replaces the CSP anyway).
+const fixedNonce = html => {
+  const nonce = /nonce-([^']+)'/.exec(html)[1];
+  return html.split(nonce).join("devsnip");
+};
+const scannerUris = { cspSource: "devsnip:", scriptUri: "__DEVSNIP_SCRIPT__", codiconsUri: "__DEVSNIP_CODICONS__" };
+write("osv.html", fixedNonce(renderOsvPage(scannerUris)));
+write("sca.html", fixedNonce(renderScaPage({ ...scannerUris, modelUri: "__DEVSNIP_MODEL__" })));
+write("scanners.json", JSON.stringify({
+  osv: { command: OSV_SCANNER_COMMAND, title: "OSV Vulnerability Scanner", script: "osv-scanner.js" },
+  sca: { command: SCA_SCANNER_COMMAND, title: "SCA Scanner", script: "sca-scanner.js", model: "sca-model.js" }
+}));
+// The only build tool runs the IDE allows: the extension's read-only Maven and Gradle invocations.
+write("build-tools.json", JSON.stringify({
+  maven: { args: treeArguments("__OUTPUT__") },
+  gradle: { args: gradleArguments("__INIT__"), argsWithoutConfigurationCache: gradleArguments("__INIT__", false), initScript: INIT_SCRIPT }
+}));
 
 // ---- Navigation: which sidebar command opens which tool ----------------------
 const nav = NAV.map(section => ({

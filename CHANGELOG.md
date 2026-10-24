@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- OSV Vulnerability Scanner and SCA Scanner from DevSnip Pro for VS Code, as editor tabs from the sidebar's Security & Auth section and Find Action. They run the extension's own scanner code; the IDE reads the project's dependency files, makes the HTTPS requests (IDE proxy settings), runs Maven / Gradle dependency listing in trusted projects with consent, and applies confirmed fixes (terminal command or undoable manifest edit with a diff preview).
+- Settings | Tools | DevSnip Pro Scanners, with the extension's scanner settings; the optional NVD API key is kept in the IDE password safe.
+
 ## [0.1.0] - 2026-10-24
 
 First preview: the REST API client and the Backend & API toolkit from DevSnip Pro for VS Code.

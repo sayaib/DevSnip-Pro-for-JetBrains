@@ -91,6 +91,7 @@ object DevSnipCommands {
         when {
             command == WebviewAssets.REST_CLIENT_COMMAND -> DevSnipPages.openRestClient(project)
             command in WebviewAssets.toolByCommand -> DevSnipPages.openTool(project, WebviewAssets.toolByCommand.getValue(command), initial)
+            command in WebviewAssets.scannerByCommand -> DevSnipPages.openScanner(project, WebviewAssets.scannerByCommand.getValue(command))
             else -> return
         }
         DevSnipUiState.getInstance().recordUsage(command)

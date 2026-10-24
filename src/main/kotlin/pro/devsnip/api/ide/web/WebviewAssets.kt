@@ -21,7 +21,10 @@ object WebviewAssets {
     const val COMMAND_PREFIX = "sayaib.hue-console."
     const val REST_CLIENT_COMMAND = COMMAND_PREFIX + "openGUI"
     private const val DATA_MARKER = "__DEVSNIP_DATA__"
-    private val STATIC = listOf("bridge.js", "tools-sidebar.js", "toolkit.js", "toolkit-runtime.js", "codicon.css", "codicon.ttf")
+    private val STATIC = listOf(
+        "bridge.js", "tools-sidebar.js", "toolkit.js", "toolkit-runtime.js", "codicon.css", "codicon.ttf",
+        "osv-scanner.js", "sca-scanner.js", "sca-model.js", "scanner-runtime.js",
+    )
 
     /** Escapes like the extension's embedJson: safe inside an inline <script>. */
     private val gson = Gson()
@@ -38,11 +41,19 @@ object WebviewAssets {
     private val toolShell: String by lazy { text("tool.html") }
     private val sidebarDefaults: JsonObject by lazy { json("sidebar-data.json") }
 
+    /** The OSV and SCA scanner pages: page id → command, title, scripts. */
+    val scanners: JsonObject by lazy { json("scanners.json") }
+
+    /** Scanner command id → page id ("osv", "sca"). */
+    val scannerByCommand: Map<String, String> by lazy { scanners.entrySet().associate { (page, s) -> s.asJsonObject["command"].asString to page } }
+
+    fun scannerTitle(page: String): String = scanners.getAsJsonObject(page)?.get("title")?.asString ?: page
+
     /** Toolkit command id → tool id. */
     val toolByCommand: Map<String, String> by lazy { tools.entrySet().associate { (id, t) -> COMMAND_PREFIX + t.asJsonObject["command"].asString to id } }
 
     /** Sidebar commands this IDE can run; the others stay hidden until they are ported. */
-    val supportedCommands: Set<String> by lazy { toolByCommand.keys + REST_CLIENT_COMMAND }
+    val supportedCommands: Set<String> by lazy { toolByCommand.keys + scannerByCommand.keys + REST_CLIENT_COMMAND }
 
     /** Every sidebar entry, in sidebar order, with its section: (command, label, section title). */
     val entries: List<Triple<String, String, String>> by lazy {
@@ -136,6 +147,16 @@ object WebviewAssets {
             .replace("__DEVSNIP_SCRIPT__", "toolkit.js")
             .replace("__DEVSNIP_TITLE__", escapeHtml(tool["title"].asString))
         return write("tool-${toolId.replace(Regex("[^A-Za-z0-9.-]"), "_")}.html", assemble(html, state.theme, "panel", host, query, scripts = listOf("toolkit-runtime.js", "bridge.js")))
+    }
+
+    /** The extension's OSV or SCA scanner page; its own code runs in the page (scanner-runtime.js) and asks the IDE through ScannerHost. */
+    fun scannerHtml(page: String, state: DevSnipUiState, host: JsonObject, query: String): Path {
+        val scanner = scanners.getAsJsonObject(page) ?: error("Unknown scanner $page")
+        var html = text("$page.html")
+            .replace("__DEVSNIP_SCRIPT__", scanner["script"].asString)
+            .replace("__DEVSNIP_CODICONS__", "codicon.css")
+        scanner["model"]?.let { html = html.replace("__DEVSNIP_MODEL__", it.asString) }
+        return write("scanner-$page.html", assemble(html, state.theme, "panel", host, query, scripts = listOf("bridge.js", "scanner-runtime.js")))
     }
 
     /**

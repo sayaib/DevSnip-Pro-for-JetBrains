@@ -1,0 +1,3 @@
+# Fixture for the JetBrains port's scanner tests (not a real project).
+requests==2.19.0
+-r common.txt

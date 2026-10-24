@@ -73,6 +73,10 @@ object IdeThemeCss {
             "input-background" to hex(inputBg),
             "input-foreground" to hex(inputFg),
             "input-border" to hex(inputBorder),
+            // Combo boxes (the scanners' filters) look like the IDE's.
+            "dropdown-background" to hex(inputBg),
+            "dropdown-foreground" to hex(inputFg),
+            "dropdown-border" to hex(inputBorder),
             "input-placeholderForeground" to hex(muted),
             "textLink-foreground" to hex(link),
             "textCodeBlock-background" to hex(mix(editorBg, editorFg, 0.06)),

@@ -1,0 +1,1 @@
+{"osv":{"command":"sayaib.hue-console.osvScanner","title":"OSV Vulnerability Scanner","script":"osv-scanner.js"},"sca":{"command":"sayaib.hue-console.scaScanner","title":"SCA Scanner","script":"sca-scanner.js","model":"sca-model.js"}}

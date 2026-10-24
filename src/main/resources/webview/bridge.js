@@ -7,6 +7,9 @@
  * - Messages from the IDE arrive as `message` events, as in VS Code.
  * - Tool pages run their tool in the page (window.DevSnipToolkit) instead of
  *   an extension host; the tool's ToolContext calls back into the IDE.
+ * - Scanner pages (osv, sca) run the extension's panel code in the page
+ *   (scanner-runtime.js): the page's messages go to it, and its I/O goes to
+ *   the IDE through window.__devsnipRpc.
  *
  * The host sets window.__devsnipHost ({ page, toolId, storage, workspaceName,
  * networkInterfaces, platform }) and window.__devsnipQuery before this runs.
@@ -44,6 +47,10 @@
       host.storage = message.storage || {};
       return;
     }
+    if (message && typeof message.type === "string" && message.type.indexOf("__") === 0) {
+      if (window.__devsnipInternal) window.__devsnipInternal(message);
+      return;
+    }
     deliver(message);
   };
 
@@ -54,6 +61,9 @@
       toHost({ type: "__rpc", id: id, method: method, params: params || {} });
     });
   }
+
+  window.__devsnipRpc = rpc;
+  window.__devsnipDeliver = deliver;
 
   function base64ToBytes(b64) {
     var bin = atob(b64 || "");
@@ -121,6 +131,11 @@
     postMessage: function (message) {
       if (host.page === "tool" && message && message.type === "run" && window.DevSnipToolkit) {
         runInPage(message);
+        return;
+      }
+      if ((host.page === "osv" || host.page === "sca") && window.__devsnipToExtension) {
+        var copy = JSON.parse(JSON.stringify(message === undefined ? null : message));
+        setTimeout(function () { window.__devsnipToExtension(copy); }, 0);
         return;
       }
       toHost(message);

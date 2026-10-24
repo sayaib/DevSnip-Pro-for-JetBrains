@@ -42,11 +42,47 @@ shows **those same pages** in the IDE's embedded Chromium (JCEF):
 |---|---|
 | Backend & API | REST API Client, cURL Converter, API Response Inspector, URL & Query String, CORS Builder & Debugger, OpenAPI / Swagger Toolkit, GraphQL Formatter & Types, API Resource Scaffolder |
 | Web & Frontend, Mobile, Text & Formatters, Encoders & Converters, Database (helpers), Testing & Debugging, Git, DevOps & Cloud, Security & Auth, AI & ML, Data & RAG | every toolkit tool of the section (100 tools in total) |
+| Security & Auth | OSV Vulnerability Scanner, SCA Scanner (see below) |
+
+### OSV Vulnerability Scanner and SCA Scanner
+
+Both open as editor tabs from the sidebar's *Security & Auth* section or
+*Find Action*, and are the extension's own pages **and** its own scanner code:
+the panels, the engine, dependency discovery, the Maven and Gradle resolvers
+and the SCA providers (`src/osv`, `src/sca`) are bundled into
+`scanner-runtime.js` and run in the page. What they ask VS Code, Node or
+`fetch` for is answered by the IDE (`ScannerHost.kt`):
+
+- **Files**: the project's files, files you pick ("Scan Files…"), and the
+  scanner's own storage (advisory cache, downloaded POMs, NVD/registry/KEV
+  caches in the IDE's system folder), temporary folders and the local Maven
+  repository. Nothing else is read or written.
+- **Network**: HTTPS only, through the IDE's HTTP proxy settings, off the
+  EDT and cancelled with the scan. What leaves the machine is the same as in
+  VS Code: package names and versions (OSV.dev, registries, Maven Central),
+  CVE ids (NVD), and the KEV catalog download.
+- **Build tools**: in a trusted project, and (by default) after you allow it
+  once per project, the extension's read-only `mvn dependency:tree` or
+  Gradle init-script listing runs from the project's wrapper or the tool on
+  PATH. The IDE refuses any other command or arguments.
+- **Fixes**: "Run in Terminal" (IDE terminal) and "Apply" (an undoable edit
+  of the manifest, with a diff preview) only run after the modal
+  confirmation, as in VS Code.
+- **Settings**: *Settings | Tools | DevSnip Pro Scanners* holds the
+  extension's `devsnip.osvScanner.*` and `devsnip.sca.*` settings; the NVD
+  API key is kept in the IDE password safe and is only sent to NVD (the
+  page never sees it).
+- **Log**: "Show Log" opens the scan log ("DevSnip Pro: OSV Scanner") in an
+  editor tab.
+
+Differences from VS Code: a scan runs in its tab, so closing the tab stops it
+(the last result is kept for the project and shown when it reopens); the
+explorer's "Scan with OSV" entry is not ported; the pages' own wording
+(privacy notes) still says "VS Code", as the extension's text does.
 
 ### Not ported yet (hidden from the sidebar until they are)
 
-Host features that need IDE-side code: OSV Vulnerability Scanner, SCA
-Scanner, Workspace Security Audit, Endpoint Security Scan, Dependency &
+Host features that need IDE-side code: Workspace Security Audit, Endpoint Security Scan, Dependency &
 Config Check, Cloud & Container Audit, Database Client, CSV / Excel viewers,
 Saved / Framework Snippets, Insert / Clean Debug Logs, Remove Unused Imports,
 Dependencies & Installation, README Manager, OpenCode Integration, and
@@ -60,9 +96,11 @@ yet as the extension's webview.
 cd webview && npm install && npm run build && npm test
 ```
 
-`npm run build` exports the sidebar and tool pages, data, themes, codicons and
-the toolkit bundle from `../../DevSnip-Pro` (or `DEVSNIP_VSCODE_REPO`) into
-`src/main/resources/webview`; `npm test` runs the Node parity checks.
+`npm run build` exports the sidebar, tool and scanner pages, data, themes,
+codicons, the toolkit bundle and the scanner runtime from `../../DevSnip-Pro` (or `DEVSNIP_VSCODE_REPO`) into
+`src/main/resources/webview`; `npm test` runs the Node parity checks (toolkit,
+then `test/scanners.mjs`: both scanners as the IDE runs them vs. the
+extension's engine on Node, on a fixture project with fabricated advisories).
 Building the plugin itself does not need Node.
 
 ## What the audit found
@@ -301,7 +339,7 @@ APIs, any local dev server works, or create an environment with
 - **Not ported yet** from the VS Code REST client: saved request collections,
   assertions, batch and load runs, SDK export, mock generator, security
   header scan, WebSocket and JWT inspection. Other sidebar sections (Auth &
-  security, frontend, database, DevOps, AI/RAG, OSV/SCA scanners) are not ported.
+  security, frontend, database, DevOps, AI/RAG) are not ported.
 - Toolkit code outputs are shown as plain monospace text, without syntax highlighting.
 - No multipart/form-data or file-upload bodies. Bodies are text.
 - The JDK HTTP client manages the `Host`, `Connection`, `Content-Length`, `Expect`

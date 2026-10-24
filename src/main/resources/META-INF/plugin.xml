@@ -25,16 +25,22 @@
       <li><b>OpenAPI / Swagger Toolkit</b>: lint, TypeScript types, a typed fetch client, cURL examples, spec from samples</li>
       <li><b>GraphQL Formatter &amp; Types</b>: format, minify, request bodies, SDL to TypeScript</li>
       <li><b>API Resource Scaffolder</b>: CRUD APIs for Express, NestJS, Next.js, Fastify, Spring Boot, ASP.NET Core and FastAPI</li>
+      <li><b>OSV Vulnerability Scanner</b> and <b>SCA Scanner</b>: known vulnerabilities in npm, PyPI, Maven, Gradle, Go, Cargo,
+      NuGet, Composer, RubyGems, Pub and more, with exploitation data, health checks and confirmed fixes</li>
     </ul>
     <p>Open the <b>DevSnip Pro</b> tool window, use <b>Tools | DevSnip Pro</b>, or find any tool with
     <b>Find Action</b> (“DevSnip Pro: …”).</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends optional="true" config-file="devsnip-terminal.xml">org.jetbrains.plugins.terminal</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="pro.devsnip.api.ide.web.DevSnipEditorProvider"/>
         <postStartupActivity implementation="pro.devsnip.api.ide.web.DevSnipActionsRegistrar"/>
+        <applicationConfigurable parentId="tools" instance="pro.devsnip.api.ide.web.ScannerSettingsConfigurable"
+                                 id="pro.devsnip.scanners" displayName="DevSnip Pro Scanners"/>
+        <notificationGroup id="DevSnip Pro" displayType="BALLOON"/>
         <toolWindow id="DevSnip Pro"
                     anchor="right"
                     icon="/icons/devsnipApi.svg"

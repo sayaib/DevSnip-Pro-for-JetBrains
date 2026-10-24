@@ -178,3 +178,7 @@ for (const f of failures.slice(0, 12)) {
   console.log(`\n✗ ${f.tool} / ${f.label}\n  node:    …${e.slice(Math.max(0, i - 80), i + 160)}\n  browser: …${g.slice(Math.max(0, i - 80), i + 160)}`);
 }
 process.exitCode = failures.length ? 1 : 0;
+
+// The OSV and SCA scanners (scanner-runtime.js) against the extension's engine on Node.
+console.log("\nScanners:");
+await import("./scanners.mjs");
