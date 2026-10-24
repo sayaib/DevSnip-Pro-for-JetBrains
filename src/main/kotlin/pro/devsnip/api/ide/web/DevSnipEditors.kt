@@ -1,7 +1,14 @@
 package pro.devsnip.api.ide.web
 
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
 import com.google.gson.JsonObject
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorPolicy
@@ -11,11 +18,15 @@ import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.ui.jcef.JBCefApp
+import pro.devsnip.api.ide.ApiClientService
 import pro.devsnip.api.ide.ui.ApiClientPanel
 import java.beans.PropertyChangeListener
+import java.io.File
 import javax.swing.Icon
 import javax.swing.JComponent
 
@@ -81,7 +92,10 @@ class DevSnipEditorProvider : FileEditorProvider, DumbAware {
         val page = file as DevSnipVirtualFile
         return when (page.kind) {
             DevSnipVirtualFile.Kind.TOOL -> ToolPageEditor(project, page)
-            DevSnipVirtualFile.Kind.REST_CLIENT -> PanelEditor(page, "REST API Client") { parent -> ApiClientPanel(project).also { Disposer.register(parent, it) } }
+            DevSnipVirtualFile.Kind.REST_CLIENT ->
+                if (JBCefApp.isSupported()) RestClientPageEditor(project, page)
+                // Without JCEF (some remote setups) the native client stands in.
+                else PanelEditor(page, "REST API Client") { parent -> ApiClientPanel(project).also { Disposer.register(parent, it) } }
             DevSnipVirtualFile.Kind.SCANNER -> ScannerPageEditor(project, page)
         }
     }
@@ -115,7 +129,7 @@ class ToolPageEditor(private val project: Project, private val file: DevSnipVirt
             add("networkInterfaces", networkInterfaces())
             addProperty("platform", if (com.intellij.openapi.util.SystemInfo.isMac) "darwin" else if (com.intellij.openapi.util.SystemInfo.isWindows) "win32" else "linux")
         }
-        browser.load(WebviewAssets.toolHtml(file.toolId, file.initial, state, hostInfo, browser.queryFunction))
+        browser.load(WebviewAssets.toolHtml(file.toolId, file.initial, state, hostInfo, browser.queryFunction, browser.instance))
     }
 
     fun setValues(values: JsonObject) = browser.post(JsonObject().apply {
@@ -156,7 +170,7 @@ class ScannerPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEdi
 
     init {
         Disposer.register(this, host)
-        browser.load(WebviewAssets.scannerHtml(file.toolId, DevSnipUiState.getInstance(), host.hostInfo(), browser.queryFunction))
+        browser.load(WebviewAssets.scannerHtml(file.toolId, DevSnipUiState.getInstance(), host.hostInfo(), browser.queryFunction, browser.instance))
     }
 
     // The extension tells a hidden panel's result with a notification instead.
@@ -168,7 +182,60 @@ class ScannerPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEdi
     override fun dispose() = Unit
 }
 
-/** A Swing panel (the REST API Client) in a tab. */
+/** The REST API Client: the extension's own page, its messages answered by [RestClientHost] on the Kotlin engine. */
+class RestClientPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEditorBase(file, "REST API Client") {
+    private val browser: DevSnipBrowser = DevSnipBrowser(this, "panel") { message -> host.handle(message) }
+    private val host: RestClientHost = RestClientHost(
+        service = ApiClientService.getInstance(),
+        ui = IdeRestClientUi(project),
+        // Replies come from pooled threads; the browser is driven from the UI thread.
+        post = { message -> ApplicationManager.getApplication().invokeLater { browser.post(message) } },
+        background = { task -> ApplicationManager.getApplication().executeOnPooledThread(task) },
+    )
+
+    init {
+        val state = DevSnipUiState.getInstance()
+        val hostInfo = JsonObject().apply {
+            addProperty("page", "rest-client")
+            add("storage", state.toolStorage())
+            addProperty("platform", if (SystemInfo.isMac) "darwin" else if (SystemInfo.isWindows) "win32" else "linux")
+        }
+        browser.load(WebviewAssets.restClientHtml(state, hostInfo, browser.queryFunction, browser.instance))
+    }
+
+    override fun getComponent(): JComponent = browser.component
+    override fun getPreferredFocusedComponent(): JComponent = browser.component
+    override fun dispose() = host.dispose()
+}
+
+/** Dialogs, notifications and storage for the REST client page, the IDE way. */
+private class IdeRestClientUi(private val project: Project) : RestClientUi {
+    override fun chooseSaveFile(title: String, defaultName: String, extensions: List<String>): File? =
+        pro.devsnip.api.ide.ui.Files.chooseSaveTarget(project, title, defaultName)
+
+    override fun chooseOpenFile(title: String, extensions: List<String>): File? {
+        val descriptor = FileChooserDescriptor(true, false, false, false, false, false).withTitle(title)
+        val chosen = FileChooser.chooseFile(descriptor, project, null) ?: return null
+        return File(chosen.path)
+    }
+
+    override fun notify(kind: String, text: String) {
+        val type = when (kind) {
+            "error" -> NotificationType.ERROR
+            "warning" -> NotificationType.WARNING
+            else -> NotificationType.INFORMATION
+        }
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) NotificationGroupManager.getInstance().getNotificationGroup("DevSnip Pro").createNotification(text, type).notify(project)
+        }
+    }
+
+    override fun setStorage(key: String, value: JsonElement?) {
+        DevSnipUiState.getInstance().setToolStorage(key, value ?: JsonNull.INSTANCE)
+    }
+}
+
+/** A Swing panel (the REST API Client) without JCEF, in a tab. */
 class PanelEditor(file: VirtualFile, title: String, create: (Disposable) -> JComponent) : DevSnipEditorBase(file, title) {
     private val component = create(this)
     override fun getComponent() = component

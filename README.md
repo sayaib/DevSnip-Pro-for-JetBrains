@@ -6,6 +6,25 @@ look, sidebar and tools as the
 VS Code extension is the single source of truth for the UI and the toolkit;
 it is not modified.
 
+## Install and configure
+
+1. **Install:** *Settings | Plugins | Marketplace*, search for "DevSnip Pro". For a ZIP
+   (`build/distributions/devsnip-pro-jetbrains-0.1.0.zip`): *Settings | Plugins | ⚙ |
+   Install Plugin from Disk…*. No restart is needed.
+2. **Open it:** the **DevSnip Pro** tool window (right side), *Tools | DevSnip Pro*, or
+   *Find Action* (⌘⇧A / Ctrl+Shift+A) and type "DevSnip Pro: …".
+3. **Configure** (all optional; nothing is needed to start):
+   - *REST API Client*: its Settings tab (timeout, retries, redirects, SSL, proxy) and the
+     environment picker for `{{variables}}`. Secret-looking variables go to the IDE password safe.
+   - *Scanners*: *Settings | Tools | DevSnip Pro Scanners* (Maven/Gradle resolution, POM
+     downloads, health checks, KEV and NVD lookups). An NVD API key is optional; the scanners
+     ask for it and keep it in the password safe.
+   - *Theme*: the theme button at the top of the sidebar. *System Default* follows the IDE theme.
+
+Requirements: an IntelliJ-based IDE 2024.1 or newer. The sidebar, toolkit and scanners use the
+IDE's embedded browser (JCEF), which every standard JetBrains IDE has; without it the tool window
+offers the REST API Client and the seven Backend & API tools as native tabs.
+
 ## How it looks and works like the VS Code extension
 
 DevSnip Pro's UI in VS Code is a set of webviews (HTML, CSS and JavaScript)
@@ -32,8 +51,12 @@ shows **those same pages** in the IDE's embedded Chromium (JCEF):
   ("DevSnip Pro: …") and under *Tools | DevSnip Pro*; files are written
   through the IDE (undoable, with an overwrite prompt); links open in the
   system browser.
+- **REST API Client**: the extension's own client page (request tabs,
+  collections, history, environments, cookies, cURL, the response viewer and
+  the Software Developer / AI & ML tools), in an editor tab. Its requests are
+  sent by the plugin's Kotlin engine; see [REST API Client](#rest-api-client).
 - **Without JCEF** (rare: some remote setups) the tool window falls back to
-  native Swing tabs: the REST API Client and the seven natively ported
+  native Swing tabs: the native REST API Client and the seven natively ported
   Backend & API tools.
 
 ### Available now
@@ -87,8 +110,7 @@ Config Check, Cloud & Container Audit, Database Client, CSV / Excel viewers,
 Saved / Framework Snippets, Insert / Clean Debug Logs, Remove Unused Imports,
 Dependencies & Installation, README Manager, OpenCode Integration, and
 Milestones & rewards (the sidebar's rank card is hidden; all DevSnip themes
-are available). The REST API Client opens as the native client (below), not
-yet as the extension's webview.
+are available, and every REST client tool is open, without a points price).
 
 ### Rebuilding the pages from the VS Code extension
 
@@ -120,7 +142,8 @@ extension host. The table maps each part to its Kotlin port:
 | `api-test.ts`: environments in `globalState` | `{{variable}}` environments | `ide/ApiClientService.kt` (secret variables go to the IDE password safe) |
 | `services/dev-operations.ts`: `requestOAuthToken()` | OAuth 2.0 client credentials, password and refresh token grants | `core/OAuth.kt` |
 | `devsnip.apiTimeout` setting | Default request timeout | Settings tab, stored by `ApiClientService` |
-| Webview UI (`api-client-webview.ts`) | Request builder and response viewer | `ide/ui/ApiClientPanel.kt` (Swing tool window) |
+| Webview UI (`getWebviewContent()`, `api-client-webview.ts`) | Request builder and response viewer | The same page, exported by `webview/build.mjs`; its messages are answered by `ide/web/RestClientHost.kt`. `ide/ui/ApiClientPanel.kt` (Swing) without JCEF |
+| `api-client-features.ts` and `services/` (collections, assertions, AI, vector DB, security probe, ...) | The client's Software Developer and AI & ML tools | The same TypeScript, bundled for the page (`api-client-runtime.js`); its HTTP goes through `core/RawHttp.kt`, TLS probes through `core/TlsProbe.kt` |
 
 The only outbound service the extension calls is PostHog telemetry
 (`src/analytics/`). It is not an API feature and was **not** ported. Premium
@@ -160,7 +183,42 @@ extension's own TypeScript. The test requires identical output: same code,
 same messages, same tables. The only allowance is the wording of JSON and
 YAML parser errors, which comes from V8 in VS Code and from the JVM here.
 
-## REST API Client features
+## REST API Client
+
+The sidebar's **REST API Client** opens the VS Code extension's own client
+page (`getWebviewContent()` in `api-test.ts`) in an editor tab, so it looks
+and behaves as in VS Code: request tabs, saved requests and collections,
+history, environments, cookies, cURL import and export, the response viewer
+with search, and the Software Developer and AI & ML tools (code generation,
+JWT inspector, JSON tools, OAuth 2.0 helper, assertions, batch tests,
+response diff, request chaining, collections import/export, LLM requests,
+streaming, model comparison and benchmarks, embeddings, vector search, RAG,
+agent and prompt tests, WebSocket client, endpoint security scan, load test,
+SDK export, mock generator).
+
+How the page is served in the IDE:
+
+| Page message (VS Code: `apiTest()` message loop) | In the IDE |
+|---|---|
+| `testAPI`, `cancelRequest` | `RestClientHost` → `ApiClientService.send` (Kotlin `HttpEngine`) on a pooled thread with a cancellation token; a new Send replaces the request in flight, as in VS Code |
+| `generateCurl`, `parseCurl` | `core/Curl.kt` (with the active environment and stored cookies) |
+| `getHistory`, `clearHistory`, `exportHistory` | `ApiClientService` history (50 entries, redacted); export through an IDE save dialog |
+| `getEnvironments`, `saveEnvironment`, `deleteEnvironment`, `setActiveEnvironment` | `ApiClientService` environments; secret-named variables in the password safe |
+| `getCookies`, `clearCookies`, `saveResponse`, `getPoints` | The engine's cookie jar, an IDE save dialog, and 0 (no points in the IDE) |
+| `feature:oauthToken`, `feature:applyOauthToken` | `core/OAuth.kt`; the access token is kept in the password safe until applied |
+| every other `feature:*` message | The extension's own `handleFeatureMessage()` running in the page (`api-client-runtime.js`), with a FeatureContext served by the IDE: `sendHttp` → the engine (shared cookies; batch/load runs skip history), storage → IDE state, HTTP made by the services (axios) → `core/RawHttp.kt` (streamed for LLM streaming), TLS probes → `core/TlsProbe.kt`, dialogs and files → IDE dialogs |
+
+The page and its runtime talk to the IDE through `webview/src/bridge.js`
+(`acquireVsCodeApi()`, plus RPCs for the runtime). The shims that make the
+extension's services run in the page are in `webview/shims/` (`axios.js`,
+`tls.js`, `https.js`, `url.js`, `vscode-rest.js`, `milestone-tracker.js`).
+The page can only write or read files the user picked in that page's own
+IDE dialog.
+
+### Native client (without JCEF)
+
+The same engine behind a Swing UI, for IDEs without the embedded browser:
+
 
 - **Requests:** any method, query params and headers tables (rows can be
   disabled), JSON, text, form URL-encoded and GraphQL (query, variables,
@@ -209,7 +267,14 @@ YAML parser errors, which comes from V8 in VS Code and from the JVM here.
 - **Redirects.** `Authorization`, `Cookie` and `Proxy-Authorization` are
   dropped when a redirect goes to another host.
 - **Cookies.** Kept in memory for the IDE session only (the VS Code client
-  persisted them). Response headers show `Set-Cookie` names, not values.
+  persisted them). The client page's cookie viewer shows `name=value` pairs,
+  as in VS Code; the native client shows only names.
+- **The client page.** It reaches the network only through the IDE (its CSP
+  allows no `fetch`; WebSockets are allowed for the WebSocket tool, as in
+  VS Code). Requests run off the UI thread and are cancelled when the tab is
+  closed. Files are written or read only where the user chose in the page's
+  own dialog. The OAuth helper's access token stays in the password safe
+  until **Apply token to request**.
 - **Copy as cURL.** The copied command includes the request's credentials,
   as in VS Code, and the UI says so.
 
@@ -257,9 +322,20 @@ Compatibility: built against platform 241 (2024.1) with Java 17 bytecode,
 
 Verified for this release (0.1.0):
 
-- **Tests:** 82 unit, integration and headless-IDE tests pass (`./gradlew test`).
-- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15) and 2026.2.3 (IU-262.10968.63), with no deprecated or internal API usages.
-- **Structure:** `verifyPluginStructure` passes. The listing assets are `pluginIcon.svg`, change notes, description and `LICENSE` (MIT).
+- **Tests:** 127 unit, integration and headless-IDE tests pass (`./gradlew test`), and the webview
+  parity suites pass (`cd webview && npm test`: 249 toolkit cases, 50 crypto cross-checks, 4 scanner suites,
+  50 REST client feature messages).
+- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15) and 2026.2.3 (IU-262.10968.63).
+  It reports, with no compatibility problems:
+  - `TrustedProjects.isTrusted` (experimental on 2024.1, deprecated on 2026.2): the only trust check on
+    every supported IDE. If a later IDE removes it, the scanners treat the project as untrusted and use
+    their built-in resolver instead of running Maven or Gradle.
+  - `TerminalToolWindowManager.createShellWidget` (deprecated on 2026.2): "Run in Terminal". If it is
+    removed, the command is copied to the clipboard with a notification instead.
+- **Structure:** `verifyPluginStructure` passes. The listing assets are `pluginIcon.svg` (and `_dark`),
+  change notes, description and `LICENSE` (MIT).
+- **Dynamic plugin:** the platform's own check (`DynamicPlugins.checkCanUnloadWithoutRestart`) allows
+  installing, updating and unloading without a restart; generated actions are removed and re-added.
 
 ### 1. Signing key (one time)
 
@@ -323,6 +399,23 @@ contacted. The one exception is a DNS lookup of the reserved
 | `ApiClientPanelTest` | The real tool window in a headless IDE: Send, Cancel, error diagnosis and Fix button, Copy as cURL, opening history |
 | `BackendApiParityTest` | All seven toolkit tools against 256 results recorded from the VS Code extension (defaults, every mode and example, edge cases, errors) |
 | `ToolPanelTest` | The generic tool panel in a headless IDE: every tool runs its defaults, form input, conditional fields, errors, generated files |
+| `WebviewAssetsTest` | The sidebar, all 100 tool pages and their theme variables as the IDE assembles them (copied to `build/webview-preview`) |
+| `ScannerHostTest` | The scanners' IDE side: globs, path rules, temporary folders, file search, HTTPS-only fetch, aborts, the NVD key, allowed Maven/Gradle runs, confirmations, settings |
+| `RestClientHostTest` | The client page's message protocol on the real engine: `testAPI` responses, errors and cancellation, environments (secrets, rename, delete, active index), cookies, history and export, cURL, saving responses, OAuth, the feature system's sender, raw HTTP (statuses, streaming, error codes, self-signed TLS), TLS probe, file and storage guards, wire formats |
+| `IdeIntegrationTest` | One page file per browser, complete script folder, the editor "Use Editor" reads, Find Action entries removed and re-added around a dynamic unload, and the platform's own dynamic-unload check |
+
+The webview side has its own checks (Node 18 or newer, and the VS Code
+extension's source next to this repository):
+
+```bash
+cd webview && npm install && npm test
+```
+
+They run all 100 toolkit tools from the bundled page code against the
+extension's TypeScript on Node (249 cases, plus 50 key/certificate
+cross-checks), both scanners as the IDE runs them against the
+extension's engine, and 50 of the REST client's in-page feature messages
+against the extension's handlers (`test/rest-client.mjs`).
 
 To try it by hand against a local server:
 
@@ -336,12 +429,18 @@ APIs, any local dev server works, or create an environment with
 
 ## Known limitations
 
-- **Not ported yet** from the VS Code REST client: saved request collections,
-  assertions, batch and load runs, SDK export, mock generator, security
-  header scan, WebSocket and JWT inspection. Other sidebar sections (Auth &
-  security, frontend, database, DevOps, AI/RAG) are not ported.
+- The REST client's points (Milestones & rewards) are not ported: every
+  tool of the client is available and nothing is charged; the points badge
+  and prices are hidden.
+- The client page's proxy setting has no proxy authentication (the engine's
+  explicit proxy is HTTP only). The native client (without JCEF) does not
+  have the page's collections and tools.
 - Toolkit code outputs are shown as plain monospace text, without syntax highlighting.
 - No multipart/form-data or file-upload bodies. Bodies are text.
+- Response bodies over 100 MB (received or after gzip/deflate decoding) are
+  refused with "The response is too large" instead of being loaded into the
+  IDE's memory. VS Code has no limit, because its client runs in a separate
+  process; here a huge body would exhaust the IDE's own heap.
 - The JDK HTTP client manages the `Host`, `Connection`, `Content-Length`, `Expect`
   and `Upgrade` headers itself. If you type them, they are skipped with a warning.
 - The explicit proxy is HTTP only, without proxy authentication. With no explicit
@@ -360,7 +459,10 @@ src/main/kotlin/pro/devsnip/api/core/   Engine (no IntelliJ dependency): models,
 src/main/kotlin/pro/devsnip/api/core/toolkit/  Backend & API toolkit: framework, JS/YAML compatibility, engines, tools
 src/main/resources/toolkit/             Tool metadata exported from the VS Code extension
 scripts/export-backend-api.js           Re-exports metadata and reference results from the VS Code source
-src/main/kotlin/pro/devsnip/api/ide/    Service (state, password safe) and tool window UI
+src/main/kotlin/pro/devsnip/api/ide/    Service (state, password safe) and the native REST client UI
+src/main/kotlin/pro/devsnip/api/ide/web/  The embedded-browser pages: sidebar, tool, REST client and scanner tabs, their IDE hosts, themes, settings
+src/main/resources/webview/             The VS Code extension's pages and bundled code (built by webview/build.mjs)
+webview/                                Build and parity tests for the pages (Node; not needed to build the plugin)
 src/main/resources/META-INF/plugin.xml  Plugin descriptor
 src/test/kotlin/                        Unit, integration and headless IDE tests
 ```
@@ -371,4 +473,4 @@ Bundled in the plugin: Gson (Apache-2.0), SnakeYAML (Apache-2.0); in the
 webview resources: VS Code Codicons (font CC BY 4.0, code MIT), node-forge
 (BSD-3-Clause), @noble/hashes and @noble/curves (MIT), buffer (MIT),
 path-browserify (MIT), yaml (ISC). Licence notices of bundled JavaScript are
-kept at the end of `toolkit-runtime.js`.
+kept at the end of `toolkit-runtime.js` and `api-client-runtime.js`.

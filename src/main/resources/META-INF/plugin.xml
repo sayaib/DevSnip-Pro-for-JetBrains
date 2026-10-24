@@ -6,8 +6,11 @@
     <description><![CDATA[
     <p>DevSnip Pro for JetBrains IDEs, with the same look, Tools sidebar and themes as the
     <a href="https://github.com/sayaib/DevSnip-Pro">DevSnip Pro</a> VS Code extension:
-    a REST and GraphQL API client and 100 developer tools for backend, frontend, mobile,
-    DevOps, security, AI &amp; ML and RAG work. Everything runs locally.</p>
+    a REST and GraphQL API client, 100 developer tools for backend, frontend, mobile,
+    DevOps, security, AI &amp; ML and RAG work, and two dependency vulnerability scanners.
+    The tools run locally in the IDE. Only the API client (to the URLs you enter) and the
+    scanners (package names and versions to OSV.dev, package registries and Maven Central;
+    CVE ids to the NVD) use the network. No account, no telemetry.</p>
     <ul>
       <li>Send HTTP requests with params, headers and JSON, text, form or GraphQL bodies</li>
       <li>Bearer, Basic, API key (header or query) and OAuth 2.0 token authentication</li>
@@ -37,10 +40,10 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="pro.devsnip.api.ide.web.DevSnipEditorProvider"/>
+        <notificationGroup id="DevSnip Pro" displayType="BALLOON"/>
         <postStartupActivity implementation="pro.devsnip.api.ide.web.DevSnipActionsRegistrar"/>
         <applicationConfigurable parentId="tools" instance="pro.devsnip.api.ide.web.ScannerSettingsConfigurable"
                                  id="pro.devsnip.scanners" displayName="DevSnip Pro Scanners"/>
-        <notificationGroup id="DevSnip Pro" displayType="BALLOON"/>
         <toolWindow id="DevSnip Pro"
                     anchor="right"
                     icon="/icons/devsnipApi.svg"
@@ -50,6 +53,7 @@
     <applicationListeners>
         <listener class="pro.devsnip.api.ide.web.DevSnipThemeListener" topic="com.intellij.ide.ui.LafManagerListener"/>
         <listener class="pro.devsnip.api.ide.web.DevSnipThemeListener" topic="com.intellij.openapi.editor.colors.EditorColorsListener"/>
+        <listener class="pro.devsnip.api.ide.web.DevSnipPluginListener" topic="com.intellij.ide.plugins.DynamicPluginListener"/>
     </applicationListeners>
 
     <actions>

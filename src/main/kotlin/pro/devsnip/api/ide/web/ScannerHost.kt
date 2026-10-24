@@ -92,6 +92,7 @@ class ScannerHost(private val project: Project, val page: String, private val po
     private val saveTargets = CopyOnWriteArraySet<Path>()
     private val processes = ConcurrentHashMap<Int, Process>()
     private val requests = ConcurrentHashMap<Int, CompletableFuture<*>>()
+    private val aborted: MutableSet<Int> = ConcurrentHashMap.newKeySet()
     private val progress = ConcurrentHashMap<Int, ProgressTask>()
     private val nextProgress = AtomicInteger(1)
     private val confirmation = Confirmation()
@@ -157,7 +158,14 @@ class ScannerHost(private val project: Project, val page: String, private val po
                 } catch (pending: PendingAnswer) {
                     pending.answer.thenAccept { reply(it?.let(::JsonPrimitive), null) }
                 }
-                "http.fetch" -> fetch(params, reply)
+                // Off the EDT: the NVD key comes from the password safe, which can block.
+                "http.fetch" -> ApplicationManager.getApplication().executeOnPooledThread {
+                    try {
+                        fetch(params, reply)
+                    } catch (e: Exception) {
+                        reply(null, e.message ?: e.javaClass.simpleName)
+                    }
+                }
                 else -> ApplicationManager.getApplication().executeOnPooledThread {
                     runCatching { io(method, params) }.onSuccess { reply(it, null) }.onFailure { reply(null, it.message ?: it.javaClass.simpleName) }
                 }
@@ -177,7 +185,12 @@ class ScannerHost(private val project: Project, val page: String, private val po
         "fs.mkdtemp" -> JsonPrimitive(makeTemp(p.str("prefix")))
         "process.spawn" -> spawn(p)
         "process.kill" -> { processes.remove(p["id"]?.asInt)?.let(::killTree); null }
-        "http.abort" -> { requests.remove(p["id"]?.asInt)?.cancel(true); null }
+        "http.abort" -> {
+            val id = p["id"]?.asInt
+            // An abort can overtake its request: remember it, and the request is never sent.
+            requests.remove(id)?.cancel(true) ?: id?.let(aborted::add)
+            null
+        }
         "secrets.get" -> secretKey(p.str("key")).let { key -> if (PasswordSafeSecretStore().get(key).isNullOrEmpty()) null else JsonPrimitive(SECRET_MARKER + key) }
         "secrets.store" -> { PasswordSafeSecretStore().set(secretKey(p.str("key")), p["value"]?.takeIf { it.isJsonPrimitive }?.asString); null }
         "state.update" -> { updateWorkspaceState(p.str("key"), p["value"] ?: JsonNull.INSTANCE); null }
@@ -364,8 +377,13 @@ class ScannerHost(private val project: Project, val page: String, private val po
         }
         val body = p["body"]?.takeIf { it.isJsonPrimitive }?.asString
         builder.method(method, if (body == null) HttpRequest.BodyPublishers.noBody() else HttpRequest.BodyPublishers.ofString(body))
+        if (aborted.remove(id) || disposed) {
+            reply(null, "The request was cancelled.")
+            return
+        }
         val future = HTTP.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofByteArray())
         requests[id] = future
+        if (aborted.remove(id) || disposed) future.cancel(true)
         future.whenComplete { response, error ->
             requests.remove(id)
             if (error != null) {

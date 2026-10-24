@@ -3,6 +3,8 @@ package pro.devsnip.api.ide.web
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.ide.actions.SearchEverywhereAction
+import com.intellij.ide.plugins.DynamicPluginListener
+import com.intellij.ide.plugins.IdeaPluginDescriptor
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -13,6 +15,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.colors.EditorColorsListener
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.openapi.wm.ToolWindowManager
@@ -35,7 +38,7 @@ class DevSnipSidebar(private val project: Project, parent: Disposable) : JPanel(
 
     private fun reload() {
         val host = JsonObject().apply { addProperty("page", "sidebar") }
-        browser.load(WebviewAssets.sidebarHtml(DevSnipUiState.getInstance(), host, browser.queryFunction))
+        browser.load(WebviewAssets.sidebarHtml(DevSnipUiState.getInstance(), host, browser.queryFunction, browser.instance))
     }
 
     private fun onMessage(message: JsonObject) {
@@ -111,9 +114,11 @@ class DevSnipActionsRegistrar : ProjectActivity {
     }
 
     companion object {
-        @Volatile
         private var registered = false
+        private val actionIds = mutableListOf<String>()
+        private val sectionGroups = mutableListOf<DefaultActionGroup>()
 
+        /** Registers the actions (on the EDT, once per plugin load). */
         fun registerOnce() {
             if (registered) return
             registered = true
@@ -124,7 +129,9 @@ class DevSnipActionsRegistrar : ProjectActivity {
             for ((command, label, sectionTitle) in WebviewAssets.entries) {
                 if (command !in WebviewAssets.supportedCommands) continue
                 val id = "DevSnipPro." + command.removePrefix(WebviewAssets.COMMAND_PREFIX)
-                val action = manager.getAction(id) ?: object : DumbAwareAction("DevSnip Pro: $label", null, DevSnipIcons.TOOL) {
+                // An action left by an earlier load of the plugin would run that load's code: replace it.
+                if (manager.getAction(id) != null) manager.unregisterAction(id)
+                val action = object : DumbAwareAction("DevSnip Pro: $label", null, DevSnipIcons.TOOL) {
                     override fun actionPerformed(e: AnActionEvent) {
                         e.project?.let { DevSnipCommands.run(it, command) }
                     }
@@ -134,15 +141,51 @@ class DevSnipActionsRegistrar : ProjectActivity {
                     }
 
                     override fun getActionUpdateThread() = ActionUpdateThread.BGT
-                }.also { manager.registerAction(id, it) }
+                }
+                manager.registerAction(id, action)
+                actionIds += id
                 if (sectionTitle != section) {
                     section = sectionTitle
-                    sectionGroup = DefaultActionGroup(sectionTitle, true)
+                    sectionGroup = DefaultActionGroup(sectionTitle, true).also { sectionGroups += it }
                     menu.add(sectionGroup)
                 }
                 sectionGroup?.add(action)
             }
         }
+
+        /** Removes what [registerOnce] added, before the plugin is unloaded (updated or disabled without a restart). */
+        fun unregisterAll() {
+            val manager = ActionManager.getInstance()
+            (manager.getAction("DevSnipPro.ToolsMenu") as? DefaultActionGroup)?.let { menu -> sectionGroups.forEach(menu::remove) }
+            sectionGroups.clear()
+            actionIds.forEach { if (manager.getAction(it) != null) manager.unregisterAction(it) }
+            actionIds.clear()
+            registered = false
+        }
+    }
+}
+
+/**
+ * Keeps the generated actions in step with dynamic plugin loading: they are
+ * removed before an update or uninstall without a restart, and added (with
+ * the editor tracking) when the plugin is installed into a running IDE, where
+ * no startup activity runs for the projects already open.
+ */
+class DevSnipPluginListener : DynamicPluginListener {
+    override fun pluginLoaded(pluginDescriptor: IdeaPluginDescriptor) {
+        if (pluginDescriptor.pluginId.idString != PLUGIN_ID) return
+        ApplicationManager.getApplication().invokeLater {
+            DevSnipActionsRegistrar.registerOnce()
+            ProjectManager.getInstance().openProjects.forEach(EditorTracker::install)
+        }
+    }
+
+    override fun beforePluginUnload(pluginDescriptor: IdeaPluginDescriptor, isUpdate: Boolean) {
+        if (pluginDescriptor.pluginId.idString == PLUGIN_ID) DevSnipActionsRegistrar.unregisterAll()
+    }
+
+    companion object {
+        const val PLUGIN_ID = "pro.devsnip.api"
     }
 }
 

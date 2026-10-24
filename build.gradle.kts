@@ -55,18 +55,19 @@ kotlin {
 intellijPlatform {
     pluginConfiguration {
         id = "pro.devsnip.api"
-        name = "DevSnip Pro: REST API Client"
+        // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
-            <p>First preview: DevSnip Pro's look, Tools sidebar, themes and 100 toolkit tools from VS Code, plus the REST API client.</p>
+            <p>First release: DevSnip Pro's look, Tools sidebar, themes and toolkit from VS Code, the REST API client and the OSV and SCA scanners.</p>
             <ul>
-              <li>REST and GraphQL requests with params, headers, and JSON, text or form bodies</li>
-              <li>Bearer, Basic, API key and OAuth 2.0 authentication</li>
-              <li>Environments with {{variables}}; secrets stored in the IDE password safe</li>
-              <li>Formatted responses with status, timing, size, headers and error diagnosis</li>
-              <li>Retries, redirects, timeouts, proxy and SSL options, cookies</li>
-              <li>cURL import/export and request history with JSON/CSV export</li>
-              <li>cURL Converter, API Response Inspector, URL &amp; Query String, CORS Builder, OpenAPI Toolkit, GraphQL Formatter and API Resource Scaffolder</li>
+              <li>The Tools sidebar with 13 sections, search, favourites, recents and the 13 DevSnip themes (System Default follows the IDE theme)</li>
+              <li>100 toolkit tools for backend, frontend, mobile, text, converters, database, testing, Git, DevOps, security, AI &amp; ML and RAG work, each in Find Action and Tools | DevSnip Pro</li>
+              <li>The REST API Client as in VS Code: request tabs, collections, history, environments, cookies and the Software Developer / AI &amp; ML tools</li>
+              <li>REST and GraphQL requests with params, headers and JSON, text or form bodies; Bearer, Basic, API key and OAuth 2.0 authentication</li>
+              <li>Environments with {{variables}}; secret variables and OAuth tokens stored in the IDE password safe</li>
+              <li>Retries, redirects, timeouts, proxy and SSL options, cookies, cURL import/export and request history</li>
+              <li>OSV Vulnerability Scanner and SCA Scanner for npm, PyPI, Maven, Gradle, Go, Cargo, NuGet, Composer, RubyGems, Pub and more, with confirmed fixes</li>
+              <li>Settings | Tools | DevSnip Pro Scanners</li>
             </ul>
         """.trimIndent()
         ideaVersion {

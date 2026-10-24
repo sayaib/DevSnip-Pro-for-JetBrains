@@ -1,5 +1,7 @@
 package pro.devsnip.api.ide.web
 
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.ui.JBColor
@@ -46,6 +48,9 @@ object IdeThemeCss {
         val secondaryBg = JBUI.CurrentTheme.Button.buttonColorStart()
         val labelFont = UIUtil.getLabelFont()
         fun ansi(key: TextAttributesKey, fallback: Color) = scheme.getAttributes(key)?.foregroundColor ?: fallback
+        fun syntax(key: TextAttributesKey, fallback: Color) = scheme.getAttributes(key)?.foregroundColor ?: fallback
+        val searchMatch = scheme.getAttributes(EditorColors.SEARCH_RESULT_ATTRIBUTES)?.backgroundColor
+            ?: if (JBColor.isBright()) Color(0xF8, 0xC9, 0xAB) else Color(0x51, 0x5C, 0x6A)
 
         val vars = linkedMapOf(
             "font-family" to "\"${labelFont.family}\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", system-ui, sans-serif",
@@ -119,6 +124,20 @@ object IdeThemeCss {
             "textBlockQuote-background" to hex(mix(editorBg, editorFg, 0.04)),
             "textBlockQuote-border" to hex(border),
             "terminal-ansiBrightYellow" to hex(ansi(ConsoleHighlighterKeys.BRIGHT_YELLOW, if (JBColor.isBright()) Color(0xB5, 0xBA, 0x00) else Color(0xF5, 0xF5, 0x43))),
+            // Used by the REST API Client page.
+            "list-activeSelectionBackground" to hex(selection),
+            "dropdown-background" to hex(inputBg),
+            "charts-red" to hex(ansi(ConsoleHighlighterKeys.RED, Color(0xF1, 0x4C, 0x4C))),
+            "charts-green" to hex(ansi(ConsoleHighlighterKeys.GREEN, Color(0x89, 0xD1, 0x85))),
+            "charts-yellow" to hex(ansi(ConsoleHighlighterKeys.YELLOW, Color(0xCC, 0xA7, 0x00))),
+            "charts-blue" to hex(ansi(ConsoleHighlighterKeys.BLUE, Color(0x3B, 0x8E, 0xEA))),
+            "editor-findMatchBackground" to hex(searchMatch),
+            "editor-findMatchHighlightBackground" to rgba(searchMatch, 0.45),
+            "symbolIcon-propertyForeground" to hex(syntax(DefaultLanguageHighlighterColors.INSTANCE_FIELD, link)),
+            "debugTokenExpression-name" to hex(syntax(DefaultLanguageHighlighterColors.INSTANCE_FIELD, link)),
+            "debugTokenExpression-string" to hex(syntax(DefaultLanguageHighlighterColors.STRING, success)),
+            "debugTokenExpression-number" to hex(syntax(DefaultLanguageHighlighterColors.NUMBER, link)),
+            "debugTokenExpression-boolean" to hex(syntax(DefaultLanguageHighlighterColors.KEYWORD, warning)),
         )
         // The backdrop VS Code paints behind a webview (sidebar or editor), and VS Code's default webview stylesheet.
         val backdrop = if (surface == "sidebar") "--vscode-sideBar-background" else "--vscode-editor-background"
@@ -156,6 +175,10 @@ blockquote { background: var(--vscode-textBlockQuote-background); border-color: 
     /** The editor scheme's console ANSI colours (Settings | Editor | Color Scheme | Console Colors). */
     private object ConsoleHighlighterKeys {
         val MAGENTA: TextAttributesKey = TextAttributesKey.find("CONSOLE_MAGENTA_OUTPUT")
+        val RED: TextAttributesKey = TextAttributesKey.find("CONSOLE_RED_OUTPUT")
+        val GREEN: TextAttributesKey = TextAttributesKey.find("CONSOLE_GREEN_OUTPUT")
+        val YELLOW: TextAttributesKey = TextAttributesKey.find("CONSOLE_YELLOW_OUTPUT")
+        val BLUE: TextAttributesKey = TextAttributesKey.find("CONSOLE_BLUE_OUTPUT")
         val BRIGHT_BLUE: TextAttributesKey = TextAttributesKey.find("CONSOLE_BLUE_BRIGHT_OUTPUT")
         val BRIGHT_CYAN: TextAttributesKey = TextAttributesKey.find("CONSOLE_CYAN_BRIGHT_OUTPUT")
         val BRIGHT_GREEN: TextAttributesKey = TextAttributesKey.find("CONSOLE_GREEN_BRIGHT_OUTPUT")

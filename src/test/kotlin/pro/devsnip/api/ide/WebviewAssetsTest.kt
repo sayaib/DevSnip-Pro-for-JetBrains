@@ -57,10 +57,33 @@ class WebviewAssetsTest : BasePlatformTestCase() {
         assertEquals(100, WebviewAssets.tools.size())
     }
 
+    fun `test the REST API Client page is the extension's own, with its runtime and bridge`() {
+        val state = DevSnipUiState.getInstance()
+        val host = JsonObject().apply { addProperty("page", "rest-client"); add("storage", JsonObject()) }
+        val page = WebviewAssets.restClientHtml(state, host, logQuery)
+        val html = Files.readString(page)
+        assertFalse(html.contains("__DEVSNIP_"))
+        assertTrue(html.contains("<title>REST API Client</title>"))
+        assertTrue(html.contains("const vscode = acquireVsCodeApi();"))
+        // The feature system and the bridge load before the page's own script.
+        val runtime = html.indexOf("src=\"api-client-runtime.js\"")
+        val bridge = html.indexOf("src=\"bridge.js\"")
+        assertTrue(runtime in 0 until bridge)
+        assertTrue(bridge < html.indexOf("acquireVsCodeApi();"))
+        // The IDE's CSP (inline scripts, local files, WebSockets for the WebSocket tool); no nonce-only CSP is left.
+        assertTrue(html.contains("connect-src ws: wss:;"))
+        assertFalse(html.contains("'nonce-"))
+        // Points belong to Milestones & rewards, not ported: hidden, every feature open.
+        assertTrue(html.contains("#pointsBadge,.cost-tag"))
+        assertTrue(html.contains("id=\"devsnip-theme\""))
+        assertTrue(Files.exists(WebviewAssets.directory.resolve("api-client-runtime.js")))
+        copyPreview(page)
+    }
+
     fun `test the IDE theme provides every VS Code variable the pages use`() {
         // Variables the pages read (DevSnip themes also define many, which needs no IDE value).
         val used = Regex("var\\((--vscode-[A-Za-z0-9-]+)").findAll(
-            listOf("sidebar.html", "tool.html", "tools-sidebar.js", "toolkit.js", "themes.json", "osv.html", "sca.html", "osv-scanner.js", "sca-scanner.js").joinToString("\n") { name ->
+            listOf("sidebar.html", "tool.html", "rest-client.html", "tools-sidebar.js", "toolkit.js", "themes.json", "osv.html", "sca.html", "osv-scanner.js", "sca-scanner.js").joinToString("\n") { name ->
                 javaClass.getResourceAsStream("/webview/$name")!!.use { String(it.readBytes()) }
             },
         ).map { it.groupValues[1] }.toSet()

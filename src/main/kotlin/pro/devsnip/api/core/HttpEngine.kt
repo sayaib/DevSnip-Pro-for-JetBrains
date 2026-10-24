@@ -1,5 +1,6 @@
 package pro.devsnip.api.core
 
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ProxySelector
@@ -9,14 +10,18 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpTimeoutException
+import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import java.time.Duration
 import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.Flow
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 import javax.net.ssl.SSLContext
@@ -76,6 +81,9 @@ class CookieJar {
         }
     }
 
+    /** Host to `name=value` pairs, for the REST client page's cookie viewer (as the VS Code client shows them). Never logged. */
+    fun entries(): Map<String, List<String>> = cookies.mapValues { (_, map) -> synchronized(map) { map.values.toList() } }.filterValues { it.isNotEmpty() }
+
     /** Host to cookie names (values are not exposed, they are often session secrets). */
     fun summary(): Map<String, List<String>> = cookies.mapValues { (_, map) -> synchronized(map) { map.keys.toList() } }.filterValues { it.isNotEmpty() }
 
@@ -95,6 +103,8 @@ class HttpEngine(
     /** Used when a request has no explicit proxy. Inside the IDE this honours the IDE proxy settings. */
     private val defaultProxySelector: () -> ProxySelector? = { ProxySelector.getDefault() },
     private val userAgent: String = "DevSnip-Pro API Tester",
+    /** Larger bodies fail with [ResponseTooLargeException] instead of being loaded. */
+    private val maxBodyBytes: Long = ResponseDecoder.MAX_BODY_BYTES,
 ) {
     private val clients = ConcurrentHashMap<ClientKey, HttpClient>()
 
@@ -134,13 +144,17 @@ class HttpEngine(
                     // The JDK rejected the request itself (for example a header value with a line break).
                     throw RequestFailedException(RequestErrorDescription("The request could not be built", e.message ?: "Invalid request.", ErrorAction.HEADERS), null, elapsedMs(start), attempt + 1, e)
                 }
-                // Too many redirects is deterministic: retrying would only repeat it.
-                if (attempt < maxRetries && e !is TooManyRedirectsException) {
+                // Too many redirects and an oversized body are deterministic: retrying would only repeat them.
+                if (attempt < maxRetries && e !is TooManyRedirectsException && e !is ResponseTooLargeException) {
                     attempt++
                     backoff(baseDelay, attempt, cancellation)
                     continue
                 }
-                val code = if (e is TooManyRedirectsException) RequestErrors.TOO_MANY_REDIRECTS else RequestErrors.codeFor(e)
+                val code = when (e) {
+                    is TooManyRedirectsException -> RequestErrors.TOO_MANY_REDIRECTS
+                    is ResponseTooLargeException -> RequestErrors.RESPONSE_TOO_LARGE
+                    else -> RequestErrors.codeFor(e)
+                }
                 val message = RequestErrors.messageFor(e)
                 throw RequestFailedException(RequestErrors.describe(message, code, timeoutMs), code, elapsedMs(start), attempt + 1, e)
             }
@@ -190,7 +204,7 @@ class HttpEngine(
             val body = current.body
             builder.method(current.method, if (body != null) HttpRequest.BodyPublishers.ofString(body) else HttpRequest.BodyPublishers.noBody())
 
-            val response = await(client.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofByteArray()), deadline, cancellation)
+            val response = await(client.sendAsync(builder.build(), limitedBody(maxBodyBytes)), deadline, cancellation)
             cookieJar.store(uri.host, response.headers().allValues("set-cookie"))
 
             val location = response.headers().firstValue("location").orElse(null)
@@ -245,7 +259,7 @@ class HttpEngine(
         val headers = response.headers().map()
             .filterKeys { !it.startsWith(":") }
             .flatMap { (name, values) -> values.map { name to it } }
-        val raw = ResponseDecoder.decompress(response.body() ?: ByteArray(0), response.headers().firstValue("content-encoding").orElse(null))
+        val raw = ResponseDecoder.decompress(response.body() ?: ByteArray(0), response.headers().firstValue("content-encoding").orElse(null), maxBodyBytes)
         val contentType = response.headers().firstValue("content-type").orElse("")
         val (body, truncated) = ResponseDecoder.decode(raw, contentType)
         return ApiResponse(
@@ -279,8 +293,54 @@ class HttpEngine(
 
     private fun elapsedMs(start: Long) = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)
 
+    /** Collects the body like `ofByteArray()`, but stops (and closes the stream) past [limit] bytes. */
+    private class LimitedBodySubscriber(private val limit: Long, private val declaredLength: Long) : HttpResponse.BodySubscriber<ByteArray> {
+        private val result = CompletableFuture<ByteArray>()
+        private val buffer = ByteArrayOutputStream()
+        private var subscription: Flow.Subscription? = null
+
+        override fun getBody(): CompletionStage<ByteArray> = result
+
+        override fun onSubscribe(subscription: Flow.Subscription) {
+            this.subscription = subscription
+            // A declared length over the limit fails before anything is read.
+            if (declaredLength > limit) {
+                subscription.cancel()
+                result.completeExceptionally(ResponseTooLargeException(limit))
+                return
+            }
+            subscription.request(Long.MAX_VALUE)
+        }
+
+        override fun onNext(item: List<ByteBuffer>) {
+            if (result.isDone) return
+            for (chunk in item) {
+                if (buffer.size().toLong() + chunk.remaining() > limit) {
+                    subscription?.cancel()
+                    result.completeExceptionally(ResponseTooLargeException(limit))
+                    return
+                }
+                val bytes = ByteArray(chunk.remaining())
+                chunk.get(bytes)
+                buffer.write(bytes)
+            }
+        }
+
+        override fun onError(throwable: Throwable) {
+            result.completeExceptionally(throwable)
+        }
+
+        override fun onComplete() {
+            result.complete(buffer.toByteArray())
+        }
+    }
+
     companion object {
         private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+
+        private fun limitedBody(limit: Long) = HttpResponse.BodyHandler<ByteArray> { info ->
+            LimitedBodySubscriber(limit, info.headers().firstValueAsLong("content-length").orElse(-1))
+        }
 
         /** Headers `java.net.http` refuses to let callers set. */
         private val RESTRICTED_HEADERS = setOf("connection", "content-length", "expect", "host", "upgrade")
@@ -289,7 +349,7 @@ class HttpEngine(
          * Trusts any certificate and skips host name checks. Only used when the
          * user turns verification off for a request (the `-k` of cURL).
          */
-        private fun insecureSslContext(): SSLContext {
+        internal fun insecureSslContext(): SSLContext {
             val trustAll = object : X509ExtendedTrustManager() {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
                 override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit

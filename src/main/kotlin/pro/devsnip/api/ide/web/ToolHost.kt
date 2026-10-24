@@ -5,7 +5,10 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileChooser.FileChooser
@@ -26,11 +29,13 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.LightVirtualFile
 import pro.devsnip.api.ide.ui.Files as FileDialogs
 import java.io.File
+import java.lang.ref.WeakReference
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileSystems
 import java.util.Base64
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The IDE side of a toolkit tool page: what `src/toolkits/runner.ts` does in
@@ -229,7 +234,7 @@ class ToolHost(private val project: Project, private val toolId: String, private
     private fun pickFile(params: JsonObject): JsonElement {
         val descriptor = FileChooserDescriptor(true, false, false, false, false, false).withTitle(params.str("title").ifEmpty { "Choose a File" })
         val chosen = FileChooser.chooseFile(descriptor, project, project.guessProjectDir()) ?: return JsonNull.INSTANCE
-        val maxBytes = params["maxBytes"]?.asLong ?: Long.MAX_VALUE
+        val maxBytes = params["maxBytes"]?.takeIf { it.isJsonPrimitive }?.asLong ?: Long.MAX_VALUE
         if (chosen.length > maxBytes) {
             throw IllegalArgumentException("${chosen.name} is ${chosen.length / 1024 / 1024} MB; files up to ${maxBytes / 1024 / 1024} MB can be converted.")
         }
@@ -284,22 +289,43 @@ class ToolHost(private val project: Project, private val toolId: String, private
     }
 }
 
-/** The text editor last used in each project, for "Use editor" and "Insert" (the tool tab itself takes focus). */
-object EditorTracker {
-    private val last = java.util.WeakHashMap<Project, Editor>()
+/**
+ * The text editor last used in a project, for "Use editor" and "Insert" (the
+ * tool tab itself takes focus). A project service, so it goes with the
+ * project, and only weakly holds the editor.
+ */
+@Service(Service.Level.PROJECT)
+class EditorTracker(private val project: Project) : Disposable {
+    @Volatile
+    private var last: WeakReference<Editor>? = null
+    private val installed = AtomicBoolean()
 
-    fun install(project: Project) {
-        project.messageBus.connect().subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
+    private fun start() {
+        if (!installed.compareAndSet(false, true)) return
+        project.messageBus.connect(this).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, object : FileEditorManagerListener {
             override fun selectionChanged(event: FileEditorManagerEvent) {
-                (event.newEditor as? TextEditor)?.let { last[project] = it.editor }
+                (event.newEditor as? TextEditor)?.let { last = WeakReference(it.editor) }
             }
         })
-        (FileEditorManager.getInstance(project).selectedEditor as? TextEditor)?.let { last[project] = it.editor }
+        ApplicationManager.getApplication().invokeLater({
+            if (last == null) (FileEditorManager.getInstance(project).selectedEditor as? TextEditor)?.let { last = WeakReference(it.editor) }
+        }, project.disposed)
     }
 
-    fun lastEditor(project: Project): Editor? {
-        val editor = last[project]
-        if (editor != null && !editor.isDisposed) return editor
+    private fun editor(): Editor? {
+        last?.get()?.takeIf { !it.isDisposed }?.let { return it }
         return FileEditorManager.getInstance(project).allEditors.filterIsInstance<TextEditor>().firstOrNull()?.editor
+    }
+
+    override fun dispose() {
+        last = null
+    }
+
+    companion object {
+        fun install(project: Project) {
+            if (!project.isDisposed) project.service<EditorTracker>().start()
+        }
+
+        fun lastEditor(project: Project): Editor? = project.service<EditorTracker>().also { it.start() }.editor()
     }
 }

@@ -252,7 +252,7 @@ class ApiClientPanel(private val project: Project) : JPanel(BorderLayout()), Dis
 
     private fun buildAuthTab(): JComponent {
         authCards.add(panelWith(JBLabel("No authentication is added to the request.")), AUTH_NONE)
-        authCards.add(form { addLabeledComponent("Token:", bearerToken).addComponent(help("Sent as Authorization: Bearer <token>. Use {{variable}} to keep the token in an environment (stored in the password safe).")) }, AUTH_BEARER)
+        authCards.add(form { addLabeledComponent("Token:", bearerToken).addComponent(help("Sent as Authorization: Bearer &lt;token&gt;. Use {{variable}} to keep the token in an environment (stored in the password safe).")) }, AUTH_BEARER)
         authCards.add(form { addLabeledComponent("Username:", basicUser).addLabeledComponent("Password:", basicPassword) }, AUTH_BASIC)
         authCards.add(form { addLabeledComponent("Key name:", apiKeyName).addLabeledComponent("Value:", apiKeyValue).addLabeledComponent("Add to:", apiKeyLocation) }, AUTH_API_KEY)
 

@@ -176,6 +176,29 @@ class HttpEngineIntegrationTest {
     }
 
     @Test
+    fun `refuses bodies over the size limit instead of loading them, without retrying`() {
+        val small = HttpEngine(defaultProxySelector = { null }, maxBodyBytes = 1024)
+        server.handle("/declared") { ex, _ -> ex.respond(200, "x".repeat(4096), contentType = "text/plain") }
+        // Chunked: no Content-Length, so the limit is enforced while reading.
+        server.handle("/chunked") { ex, _ ->
+            ex.responseHeaders.add("Content-Type", "text/plain")
+            ex.sendResponseHeaders(200, 0)
+            ex.responseBody.use { out -> repeat(8) { out.write("y".repeat(512).toByteArray()); out.flush() } }
+        }
+        val bomb = ByteArrayOutputStream().also { out -> GZIPOutputStream(out).use { it.write(ByteArray(64 * 1024)) } }.toByteArray()
+        server.handle("/bomb") { ex, _ -> ex.respondBytes(200, bomb, mapOf("Content-Type" to "text/plain", "Content-Encoding" to "gzip")) }
+        for (path in listOf("/declared", "/chunked", "/bomb")) {
+            val error = assertThrows<RequestFailedException>(path) { small.execute(ApiRequest(url = server.url(path), retries = 2, retryDelayMs = 0), null, 5_000) }
+            assertEquals("The response is too large", error.description.title, path)
+            assertEquals(RequestErrors.RESPONSE_TOO_LARGE, error.code, path)
+            assertEquals(1, error.attempts, path)
+        }
+        assertEquals(1, server.requests.count { it.path == "/declared" })
+        // Within the limit, the same body is returned as usual.
+        assertEquals(4096L, HttpEngine(defaultProxySelector = { null }, maxBodyBytes = 4096).execute(ApiRequest(url = server.url("/declared")), null, 5_000).sizeBytes)
+    }
+
+    @Test
     fun `skips headers the JDK manages and says so`() {
         server.handle("/h") { ex, _ -> ex.respond(200, "{}") }
         val response = send(ApiRequest(url = server.url("/h"), headers = listOf(KeyValue("Host", "spoofed"), KeyValue("Connection", "close"))))

@@ -42,9 +42,18 @@ sealed class DecodedBody {
         }
 }
 
+/**
+ * A response body larger than the client loads. The VS Code client runs in its
+ * own extension host process; here the body would fill the IDE's own memory.
+ */
+class ResponseTooLargeException(val limit: Long) : IOException("Response body larger than ${formatBytes(limit)}")
+
 /** Port of `ApiTester.decodeBody` and `formatBytes` from the VS Code extension. */
 object ResponseDecoder {
     const val MAX_DISPLAY_BYTES = 2 * 1024 * 1024
+
+    /** The most a response body may hold, received or decompressed (the IDE's heap is shared with everything else). */
+    const val MAX_BODY_BYTES = 100L * 1024 * 1024
 
     private val DECLARED_TEXT = Regex("^text/|json|xml|javascript|ecmascript|x-www-form-urlencoded|graphql|yaml|csv|svg|html")
     private val DECLARED_BINARY = Regex("^(image|audio|video|font)/|application/(octet-stream|pdf|zip|gzip|x-tar|x-7z|vnd\\.|msword|protobuf|x-protobuf|wasm)")
@@ -77,18 +86,33 @@ object ResponseDecoder {
         return DecodedBody.Text(text) to false
     }
 
-    /** Undoes `Content-Encoding: gzip/deflate`; the JDK client does not do it. */
-    fun decompress(raw: ByteArray, contentEncoding: String?): ByteArray {
+    /** Undoes `Content-Encoding: gzip/deflate`; the JDK client does not do it. More than [limit] bytes out fails. */
+    fun decompress(raw: ByteArray, contentEncoding: String?, limit: Long = MAX_BODY_BYTES): ByteArray {
         val encoding = contentEncoding?.trim()?.lowercase().orEmpty()
         if (raw.isEmpty()) return raw
         return try {
             when (encoding) {
-                "gzip", "x-gzip" -> GZIPInputStream(ByteArrayInputStream(raw)).use { it.readBytes() }
-                "deflate" -> InflaterInputStream(ByteArrayInputStream(raw)).use { it.readBytes() }
+                "gzip", "x-gzip" -> GZIPInputStream(ByteArrayInputStream(raw)).use { readLimited(it, limit) }
+                "deflate" -> InflaterInputStream(ByteArrayInputStream(raw)).use { readLimited(it, limit) }
                 else -> raw
             }
+        } catch (e: ResponseTooLargeException) {
+            throw e
         } catch (_: IOException) {
             raw
+        }
+    }
+
+    private fun readLimited(input: java.io.InputStream, limit: Long): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val n = input.read(buffer)
+            if (n < 0) return out.toByteArray()
+            total += n
+            if (total > limit) throw ResponseTooLargeException(limit)
+            out.write(buffer, 0, n)
         }
     }
 

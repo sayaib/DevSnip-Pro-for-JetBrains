@@ -9,6 +9,7 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.util.SystemInfo
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.util.zip.CRC32
 
 /**
@@ -22,7 +23,7 @@ object WebviewAssets {
     const val REST_CLIENT_COMMAND = COMMAND_PREFIX + "openGUI"
     private const val DATA_MARKER = "__DEVSNIP_DATA__"
     private val STATIC = listOf(
-        "bridge.js", "tools-sidebar.js", "toolkit.js", "toolkit-runtime.js", "codicon.css", "codicon.ttf",
+        "bridge.js", "tools-sidebar.js", "toolkit.js", "toolkit-runtime.js", "api-client-runtime.js", "codicon.css", "codicon.ttf",
         "osv-scanner.js", "sca-scanner.js", "sca-model.js", "scanner-runtime.js",
     )
 
@@ -39,6 +40,7 @@ object WebviewAssets {
     private val themes: JsonObject by lazy { json("themes.json") }
     private val sidebarShell: String by lazy { text("sidebar.html") }
     private val toolShell: String by lazy { text("tool.html") }
+    private val restClientShell: String by lazy { text("rest-client.html") }
     private val sidebarDefaults: JsonObject by lazy { json("sidebar-data.json") }
 
     /** The OSV and SCA scanner pages: page id → command, title, scripts. */
@@ -65,15 +67,33 @@ object WebviewAssets {
 
     fun toolTitle(toolId: String): String = tools.getAsJsonObject(toolId)?.get("title")?.asString ?: toolId
 
-    /** The pages' scripts and font, written once per build to the IDE's system folder. */
+    /**
+     * The pages' scripts and font, written once per build to the IDE's system
+     * folder (atomically, so an interrupted write is never reused). Folders
+     * of earlier plugin versions are removed.
+     */
     val directory: Path by lazy {
         val crc = CRC32()
         STATIC.forEach { crc.update(resource(it)) }
-        val dir = Path.of(PathManager.getSystemPath(), "devsnip-pro", "webview", java.lang.Long.toHexString(crc.value))
+        val root = Path.of(PathManager.getSystemPath(), "devsnip-pro", "webview")
+        val dir = root.resolve(java.lang.Long.toHexString(crc.value))
         Files.createDirectories(dir)
         for (name in STATIC) {
             val target = dir.resolve(name)
-            if (!Files.exists(target)) Files.write(target, resource(name))
+            val bytes = resource(name)
+            if (Files.isRegularFile(target) && Files.size(target) == bytes.size.toLong()) continue
+            val temp = Files.createTempFile(dir, "$name.", ".tmp")
+            try {
+                Files.write(temp, bytes)
+                Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+            } catch (e: java.io.IOException) {
+                // Windows refuses to replace a file a browser has open; the one there is still usable.
+                Files.deleteIfExists(temp)
+                if (!Files.isRegularFile(target)) throw e
+            }
+        }
+        runCatching {
+            Files.list(root).use { siblings -> siblings.filter { it != dir && Files.isDirectory(it) }.toList() }.forEach { it.toFile().deleteRecursively() }
         }
         dir
     }
@@ -128,16 +148,20 @@ object WebviewAssets {
         return out
     }
 
-    fun sidebarHtml(state: DevSnipUiState, host: JsonObject, query: String): Path {
+    /**
+     * The page functions write `<page>[-<instance>].html`: each browser passes
+     * its own [instance], because the page holds that browser's query function.
+     */
+    fun sidebarHtml(state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path {
         val html = sidebarShell
             .replace(DATA_MARKER, embed(sidebarData(state)))
             .replace("__DEVSNIP_SCRIPT__", "tools-sidebar.js")
             .replace("__DEVSNIP_CODICONS__", "codicon.css")
         // The rank card belongs to Milestones & rewards, which the IDE does not have yet.
-        return write("sidebar.html", assemble(html, state.theme, "sidebar", host, query, extraHead = "<style>#rank{display:none !important}</style>", scripts = listOf("bridge.js")))
+        return write("sidebar", instance, assemble(html, state.theme, "sidebar", host, query, extraHead = "<style>#rank{display:none !important}</style>", scripts = listOf("bridge.js")))
     }
 
-    fun toolHtml(toolId: String, initial: JsonObject, state: DevSnipUiState, host: JsonObject, query: String): Path {
+    fun toolHtml(toolId: String, initial: JsonObject, state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path {
         val tool = tools.getAsJsonObject(toolId) ?: error("Unknown tool $toolId")
         val data = tool.getAsJsonObject("data").deepCopy()
         data.add("initial", initial)
@@ -146,17 +170,33 @@ object WebviewAssets {
             .replace(DATA_MARKER, embed(data))
             .replace("__DEVSNIP_SCRIPT__", "toolkit.js")
             .replace("__DEVSNIP_TITLE__", escapeHtml(tool["title"].asString))
-        return write("tool-${toolId.replace(Regex("[^A-Za-z0-9.-]"), "_")}.html", assemble(html, state.theme, "panel", host, query, scripts = listOf("toolkit-runtime.js", "bridge.js")))
+        return write("tool-${toolId.replace(Regex("[^A-Za-z0-9.-]"), "_")}", instance, assemble(html, state.theme, "panel", host, query, scripts = listOf("toolkit-runtime.js", "bridge.js")))
     }
 
     /** The extension's OSV or SCA scanner page; its own code runs in the page (scanner-runtime.js) and asks the IDE through ScannerHost. */
-    fun scannerHtml(page: String, state: DevSnipUiState, host: JsonObject, query: String): Path {
+    fun scannerHtml(page: String, state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path {
         val scanner = scanners.getAsJsonObject(page) ?: error("Unknown scanner $page")
         var html = text("$page.html")
             .replace("__DEVSNIP_SCRIPT__", scanner["script"].asString)
             .replace("__DEVSNIP_CODICONS__", "codicon.css")
         scanner["model"]?.let { html = html.replace("__DEVSNIP_MODEL__", it.asString) }
-        return write("scanner-$page.html", assemble(html, state.theme, "panel", host, query, scripts = listOf("bridge.js", "scanner-runtime.js")))
+        return write("scanner-$page", instance, assemble(html, state.theme, "panel", host, query, scripts = listOf("bridge.js", "scanner-runtime.js")))
+    }
+
+    /**
+     * The REST API Client: the extension's own page (getWebviewContent). Its
+     * feature system runs in the page (api-client-runtime.js); requests go to
+     * the IDE. The points balance and prices belong to Milestones & rewards,
+     * which the IDE does not have yet, so they are hidden (every feature is
+     * available). The WebSocket tool may connect, as for an entitled VS Code user.
+     */
+    fun restClientHtml(state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path {
+        val hidePoints = "<style>#pointsBadge,.cost-tag,#featureTierPill,#featureUpgradeBtn,#view-points{display:none !important}</style>"
+        return write(
+            "rest-client",
+            instance,
+            assemble(restClientShell, state.theme, "panel", host, query, extraHead = hidePoints, scripts = listOf("api-client-runtime.js", "bridge.js"), connect = "ws: wss:"),
+        )
     }
 
     /**
@@ -165,9 +205,9 @@ object WebviewAssets {
      * class for light or dark, plus the bridge. The CSP allows only this
      * page's own files and inline styles.
      */
-    private fun assemble(html: String, themeId: String, surface: String, host: JsonObject, query: String, extraHead: String = "", scripts: List<String>): String {
+    private fun assemble(html: String, themeId: String, surface: String, host: JsonObject, query: String, extraHead: String = "", scripts: List<String>, connect: String = "'none'"): String {
         val theme = themes.getAsJsonObject("blocks").getAsJsonObject(validTheme(themeId))[surface].asString.replace("__DEVSNIP_NONCE__", "devsnip")
-        val csp = "default-src 'none'; style-src 'unsafe-inline' file:; script-src 'unsafe-inline' file:; font-src file: data:; img-src file: data: https:; connect-src 'none';"
+        val csp = "default-src 'none'; style-src 'unsafe-inline' file:; script-src 'unsafe-inline' file:; font-src file: data:; img-src file: data: https:; connect-src $connect;"
         val head = "<style id=\"devsnip-ide-theme\" data-surface=\"$surface\">${IdeThemeCss.css(surface)}</style>$extraHead" +
             "<script>window.__devsnipHost=${embed(host)};window.__devsnipQuery=function(request){$query};</script>" +
             scripts.joinToString("") { "<script src=\"$it\"></script>" }
@@ -179,8 +219,9 @@ object WebviewAssets {
             .replaceFirst("<body>", "<body class=\"$bodyClass\" data-vscode-theme-kind=\"$bodyClass\">")
     }
 
-    private fun write(name: String, html: String): Path {
-        val file = directory.resolve(name)
+    private fun write(name: String, instance: String, html: String): Path {
+        val suffix = instance.replace(Regex("[^A-Za-z0-9]"), "").let { if (it.isEmpty()) "" else "-$it" }
+        val file = directory.resolve("$name$suffix.html")
         Files.writeString(file, html)
         return file
     }

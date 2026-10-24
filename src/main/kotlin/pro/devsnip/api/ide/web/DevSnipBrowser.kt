@@ -31,6 +31,10 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
     private val queue = mutableListOf<String>()
     private var loaded = false
     private var disposed = false
+    private var page: Path? = null
+
+    /** Names this browser's page file (see [WebviewAssets.sidebarHtml]). */
+    val instance: String = "b" + NEXT_INSTANCE.incrementAndGet()
 
     val component: JComponent get() = browser.component
 
@@ -78,7 +82,13 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
 
     fun load(page: Path) {
         loaded = false
+        this.page?.takeIf { it != page }?.let(::deletePage)
+        this.page = page
         browser.loadURL(page.toUri().toString())
+    }
+
+    private fun deletePage(path: Path) {
+        runCatching { java.nio.file.Files.deleteIfExists(path) }
     }
 
     /** Delivers a message to the page, like `webview.postMessage`. */
@@ -109,10 +119,13 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
     override fun dispose() {
         disposed = true
         OPEN.remove(this)
+        queue.clear()
+        page?.let(::deletePage)
     }
 
     companion object {
         private val LOG = Logger.getInstance(DevSnipBrowser::class.java)
+        private val NEXT_INSTANCE = java.util.concurrent.atomic.AtomicLong()
 
         /** Every open DevSnip Pro page, so theme changes reach all of them. */
         val OPEN: MutableSet<DevSnipBrowser> = CopyOnWriteArraySet()

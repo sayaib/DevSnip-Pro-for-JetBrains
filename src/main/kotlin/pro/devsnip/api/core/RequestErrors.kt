@@ -23,6 +23,7 @@ enum class ErrorAction { SETTINGS, AUTH, BODY, HEADERS, ENV, URL }
 /** Port of `describeRequestError()` from the VS Code extension, plus a mapping from JDK exceptions to its error codes. */
 object RequestErrors {
     const val TOO_MANY_REDIRECTS = "ERR_FR_TOO_MANY_REDIRECTS"
+    const val RESPONSE_TOO_LARGE = "ERR_RESPONSE_TOO_LARGE"
 
     fun describe(message: String?, code: String?, timeoutMs: Long? = null): RequestErrorDescription {
         val text = message.orEmpty()
@@ -47,6 +48,12 @@ object RequestErrors {
         }
         if (Regex("Invalid HTTP method", RegexOption.IGNORE_CASE).containsMatchIn(text)) {
             return RequestErrorDescription("Invalid HTTP method", "$text. Use a method such as GET, POST, PUT, PATCH or DELETE.", ErrorAction.URL)
+        }
+        if (has(Regex("ERR_RESPONSE_TOO_LARGE|Response body larger than"))) {
+            return RequestErrorDescription(
+                "The response is too large",
+                "Response bodies over ${formatBytes(ResponseDecoder.MAX_BODY_BYTES)} are not loaded into the IDE. Use Copy as cURL to download it, or request a smaller page.",
+            )
         }
         if (has(Regex("ENOTFOUND|EAI_AGAIN"))) {
             return RequestErrorDescription("Could not find the server", "The host name did not resolve. Check it for typos, check your network or VPN, and check the environment's base URL.", ErrorAction.URL)

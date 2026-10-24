@@ -157,6 +157,17 @@ class ScannerHostTest : BasePlatformTestCase() {
         assertNotNull(call("http.fetch", params("id" to 4, "url" to "file:///etc/passwd"))["error"])
     }
 
+    fun `test an abort that overtakes its request means the request is never sent`() {
+        MockServer.http().handle("/late") { exchange, _ -> exchange.sendResponseHeaders(200, -1) }.use { server ->
+            assertNull(call("http.abort", params("id" to 40))["error"])
+            val answer = call("http.fetch", params("id" to 40, "url" to server.url("/late")))
+            assertEquals("The request was cancelled.", answer["error"]?.asString)
+            assertTrue(server.requests.isEmpty())
+            // Later requests are not affected.
+            assertEquals(200, call("http.fetch", params("id" to 41, "url" to server.url("/late")))["result"].asJsonObject["status"].asInt)
+        }
+    }
+
     fun `test only https leaves the machine and the NVD key only goes to NVD`() {
         assertTrue(ScannerHost.allowedUrl(URI("https://api.osv.dev/v1/querybatch")))
         assertTrue(ScannerHost.allowedUrl(URI("http://127.0.0.1:8080/x")))
