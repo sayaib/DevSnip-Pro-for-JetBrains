@@ -5,7 +5,7 @@
   "description": "Builds the DevSnip Pro VS Code webviews and toolkit into resources for the JetBrains plugin.",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node test/parity.mjs"
+    "test": "node test/parity.mjs && node test/rest-client.mjs"
   },
   "devDependencies": {
     "@noble/hashes": "1.7.1",

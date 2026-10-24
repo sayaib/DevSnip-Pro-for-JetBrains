@@ -13,12 +13,20 @@ import { themeChoices } from "@devsnip/theme/service";
 import { injectTheme, themeMessage } from "@devsnip/theme/inject";
 import { THEMES, SYSTEM_THEME_ID } from "@devsnip/theme/themes";
 import { NAV, COMMAND_PREFIX } from "@devsnip/toolkits/layout";
+import { getWebviewContent } from "@devsnip/commands/api-test";
 
 const out = process.argv[2];
 fs.mkdirSync(out, { recursive: true });
 const write = (name, text) => fs.writeFileSync(path.join(out, name), text);
 
 const DATA_MARKER = "__DEVSNIP_DATA__";
+
+/** The pages' random CSP nonces made fixed, so a rebuild only changes what really changed (the IDE sets its own CSP). */
+const fixNonces = html => {
+  const nonces = new Set([...html.matchAll(/nonce-([A-Za-z0-9+/=]+)/g)].map(m => m[1]));
+  for (const nonce of nonces) html = html.split(nonce).join("devsnip");
+  return html;
+};
 
 /** Replaces the page's embedded JSON (script#id) with a marker; returns [html, data]. */
 function splitData(html, id) {
@@ -41,7 +49,7 @@ const sidebarHtml = renderToolsSidebar({
   onboarding: { guide: null, whatsNew: null }
 });
 const [sidebarShell, sidebarData] = splitData(sidebarHtml, "sidebar-data");
-write("sidebar.html", sidebarShell);
+write("sidebar.html", fixNonces(sidebarShell));
 write("sidebar-data.json", JSON.stringify(sidebarData));
 
 // ---- Tool pages ------------------------------------------------------------
@@ -68,6 +76,12 @@ for (const tool of ALL_TOOLS) {
 write("tool.html", toolShell);
 write("tools.json", JSON.stringify(tools));
 
+// ---- REST API Client -----------------------------------------------------
+// The extension's own page (api-test.ts getWebviewContent). History arrives
+// by message once the page has loaded, as in VS Code; the WebSocket tool's
+// connect-src allowance is decided by the IDE's CSP.
+write("rest-client.html", fixNonces(getWebviewContent([], true)).trim());
+
 // ---- Navigation: which sidebar command opens which tool ----------------------
 const nav = NAV.map(section => ({
   id: section.id,
@@ -92,4 +106,4 @@ for (const id of [SYSTEM_THEME_ID, ...THEMES.map(t => t.id)]) {
 }
 write("themes.json", JSON.stringify(themes));
 
-console.log(`Exported the sidebar, ${Object.keys(tools).length} tool pages and ${Object.keys(themes.blocks).length} themes.`);
+console.log(`Exported the sidebar, the REST API Client, ${Object.keys(tools).length} tool pages and ${Object.keys(themes.blocks).length} themes.`);

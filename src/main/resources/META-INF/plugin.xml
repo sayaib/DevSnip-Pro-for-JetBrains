@@ -34,6 +34,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="pro.devsnip.api.ide.web.DevSnipEditorProvider"/>
+        <notificationGroup id="DevSnip Pro" displayType="BALLOON"/>
         <postStartupActivity implementation="pro.devsnip.api.ide.web.DevSnipActionsRegistrar"/>
         <toolWindow id="DevSnip Pro"
                     anchor="right"

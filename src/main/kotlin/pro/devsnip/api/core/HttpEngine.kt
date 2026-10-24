@@ -76,6 +76,9 @@ class CookieJar {
         }
     }
 
+    /** Host to `name=value` pairs, for the REST client page's cookie viewer (as the VS Code client shows them). Never logged. */
+    fun entries(): Map<String, List<String>> = cookies.mapValues { (_, map) -> synchronized(map) { map.values.toList() } }.filterValues { it.isNotEmpty() }
+
     /** Host to cookie names (values are not exposed, they are often session secrets). */
     fun summary(): Map<String, List<String>> = cookies.mapValues { (_, map) -> synchronized(map) { map.keys.toList() } }.filterValues { it.isNotEmpty() }
 
@@ -289,7 +292,7 @@ class HttpEngine(
          * Trusts any certificate and skips host name checks. Only used when the
          * user turns verification off for a request (the `-k` of cURL).
          */
-        private fun insecureSslContext(): SSLContext {
+        internal fun insecureSslContext(): SSLContext {
             val trustAll = object : X509ExtendedTrustManager() {
                 override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
                 override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit

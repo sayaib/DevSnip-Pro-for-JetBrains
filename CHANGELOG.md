@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- The REST API Client opens as the VS Code extension's own client page (in the IDE's embedded browser), with its request tabs, collections, history, environments, cookies and Software Developer / AI & ML tools. Requests still go through the plugin's Kotlin engine; environment secrets and OAuth tokens stay in the IDE password safe. Without JCEF the native client is used.
+- Every REST client tool is available in the IDE without a points price (Milestones & rewards are not ported).
+
 ## [0.1.0] - 2026-10-24
 
 First preview: the REST API client and the Backend & API toolkit from DevSnip Pro for VS Code.

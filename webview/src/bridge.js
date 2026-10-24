@@ -8,6 +8,10 @@
  * - Tool pages run their tool in the page (window.DevSnipToolkit) instead of
  *   an extension host; the tool's ToolContext calls back into the IDE.
  *
+ * - The REST API Client page runs its feature system in the page
+ *   (window.DevSnipApiClient); its HTTP, files and storage go to the IDE
+ *   through window.__devsnipApiHost.
+ *
  * The host sets window.__devsnipHost ({ page, toolId, storage, workspaceName,
  * networkInterfaces, platform }) and window.__devsnipQuery before this runs.
  */
@@ -17,6 +21,7 @@
   var stateKey = "devsnip-state:" + (host.page || "page") + ":" + (host.toolId || "");
   var pending = {};
   var nextRpc = 1;
+  var streams = {};
 
   function toHost(message) {
     try {
@@ -36,8 +41,14 @@
       var call = pending[message.id];
       delete pending[message.id];
       if (!call) return;
-      if (message.error) call.reject(new Error(message.error));
+      if (message.error) call.reject(Object.assign(new Error(message.error), message.errorData || {}));
       else call.resolve(message.result);
+      return;
+    }
+    if (message && message.type === "__stream") {
+      var listener = streams[message.id];
+      if (listener) listener(message.event, message.value);
+      if (message.event === "end" || message.event === "error") delete streams[message.id];
       return;
     }
     if (message && message.type === "__storage") {
@@ -100,6 +111,30 @@
     return ctx;
   }
 
+  /** What the REST API Client's in-page feature system needs from the IDE. */
+  if (host.page === "rest-client") {
+    window.__devsnipApiHost = {
+      rpc: rpc,
+      deliver: deliver,
+      onStream: function (id, listener) {
+        if (listener) streams[id] = listener;
+        else delete streams[id];
+      },
+      storage: {
+        get: function (key) {
+          var store = host.storage || {};
+          return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : undefined;
+        },
+        set: function (key, value) {
+          host.storage = host.storage || {};
+          host.storage[key] = value;
+          return rpc("storage.set", { key: key, value: value === undefined ? null : value }).then(function () { return undefined; });
+        },
+        keys: function () { return Object.keys(host.storage || {}); }
+      }
+    };
+  }
+
   var latestRequest = 0;
 
   /** runner.ts handleMessage("run"), executed in the page. */
@@ -121,6 +156,10 @@
     postMessage: function (message) {
       if (host.page === "tool" && message && message.type === "run" && window.DevSnipToolkit) {
         runInPage(message);
+        return;
+      }
+      if (host.page === "rest-client" && window.DevSnipApiClient && window.DevSnipApiClient.owns(message)) {
+        window.DevSnipApiClient.handle(message);
         return;
       }
       toHost(message);

@@ -117,23 +117,70 @@ class ApiClientService : PersistentStateComponent<ApiClientState> {
         }
     }
 
+    /**
+     * Creates or updates one environment, as the VS Code client's
+     * `saveEnvironment`: with [previousName] that environment is renamed in
+     * place, so it keeps its position (and stays active). Blocks.
+     */
+    fun saveEnvironment(environment: Environment, previousName: String? = null) {
+        val name = environment.name.trim()
+        require(name.isNotEmpty()) { "An environment needs a name." }
+        val clean = Environment(name, environment.variables.mapKeys { it.key.trim() }.filterKeys { it.isNotEmpty() })
+        val all = loadAllEnvironments().toMutableList()
+        val renameIndex = previousName?.let { old -> all.indexOfFirst { it.name == old } } ?: -1
+        val index = if (renameIndex >= 0) renameIndex else all.indexOfFirst { it.name == name }
+        val wasActive = index >= 0 && all[index].name == activeEnvironmentName
+        if (index >= 0) all[index] = clean else all += clean
+        val kept = if (index >= 0) index else all.lastIndex
+        // Another environment with the new name is replaced by the renamed one.
+        saveEnvironments(all.filterIndexed { i, env -> i == kept || env.name != name })
+        if (wasActive) activeEnvironmentName = name
+    }
+
+    /** Deletes an environment; the active one stays active (by name) when it still exists. Blocks. */
+    fun deleteEnvironment(name: String) {
+        val all = loadAllEnvironments()
+        val activeIndex = all.indexOfFirst { it.name == activeEnvironmentName }
+        val remaining = all.filter { it.name != name }
+        saveEnvironments(remaining)
+        val active = all.getOrNull(activeIndex)?.name
+        activeEnvironmentName = when {
+            active != null && remaining.any { it.name == active } -> active
+            // The VS Code client keeps the index, bounded by the new length.
+            activeIndex >= 0 && remaining.isNotEmpty() -> remaining[minOf(activeIndex, remaining.size - 1)].name
+            else -> null
+        }
+    }
+
+    /** The active environment's position in [environmentNames], or -1. */
+    var activeEnvironmentIndex: Int
+        get() = environmentNames().indexOf(activeEnvironmentName)
+        set(value) {
+            activeEnvironmentName = environmentNames().getOrNull(value)
+        }
+
     private fun secretKey(environment: String, variable: String) = "env/$environment/$variable"
 
     // ----------------------------------------------------------------- requests
 
-    /** Sends a request against the active environment and records it in history. Blocks. */
-    fun send(request: ApiRequest, cancellation: CancellationToken): ApiResponse {
+    /**
+     * Sends a request against the active environment and records it in history
+     * (unless [recordHistory] is false: batch and load runs). Blocks.
+     */
+    fun send(request: ApiRequest, cancellation: CancellationToken): ApiResponse = send(request, cancellation, recordHistory = true)
+
+    fun send(request: ApiRequest, cancellation: CancellationToken, recordHistory: Boolean): ApiResponse {
         val environment = loadEnvironment(activeEnvironmentName)
         val timeout = defaultTimeoutMs
         val resolvedUrl = runCatching { RequestBuilder.build(request, environment).url }.getOrDefault(request.url)
         LOG.debug { "Sending ${request.method} ${Redaction.redactUrl(resolvedUrl)}" }
         try {
             val response = engine.execute(request, environment, timeout, cancellation)
-            record(request, resolvedUrl, response.status, response.responseTimeMs, response.sizeBytes, response.attempts)
+            if (recordHistory) record(request, resolvedUrl, response.status, response.responseTimeMs, response.sizeBytes, response.attempts)
             LOG.debug { "${request.method} ${Redaction.redactUrl(resolvedUrl)} -> ${response.status} in ${response.responseTimeMs} ms" }
             return response
         } catch (e: RequestFailedException) {
-            record(request, resolvedUrl, 0, e.responseTimeMs, null, e.attempts)
+            if (recordHistory) record(request, resolvedUrl, 0, e.responseTimeMs, null, e.attempts)
             // Only the error kind is logged: no headers, bodies or credentials.
             LOG.debug { "${request.method} ${Redaction.redactUrl(resolvedUrl)} failed: ${e.code ?: e.description.title}" }
             throw e

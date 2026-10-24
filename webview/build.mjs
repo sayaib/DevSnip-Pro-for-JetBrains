@@ -5,7 +5,10 @@
  *
  *   media/*.js, codicons     copied as they are
  *   toolkit-runtime.js       every toolkit tool, bundled for the browser
- *   sidebar/tool shells,     exported by src/export.js
+ *   api-client-runtime.js    the REST API Client's feature system, bundled
+ *                            for the browser (HTTP, files: the IDE)
+ *   sidebar/tool/REST client exported by src/export.js
+ *   shells,
  *   data, themes
  *
  * Output: ../src/main/resources/webview (committed, so building the plugin
@@ -53,6 +56,43 @@ await build({
     path: path.join(here, "node_modules/path-browserify"),
     "node:path": path.join(here, "node_modules/path-browserify"),
     vscode: shim("vscode.cjs")
+  },
+  inject: [shim("globals.js")],
+  define: { "process.env.NODE_ENV": '"production"', "process.platform": '"browser"', global: "globalThis" },
+  logLevel: "warning"
+});
+
+// 1b. The REST API Client's feature system (api-client-features.ts and its
+// services), for the browser. Network, TLS, files and dialogs go to the IDE
+// (shims/axios.js, tls.js, vscode-browser.js); the points tracker is not
+// ported, so its import is a stub.
+const milestoneStub = {
+  name: "devsnip-milestone-stub",
+  setup(b) {
+    b.onResolve({ filter: /(^|\/)milestoneTracker$/ }, () => ({ path: shim("milestone-tracker.js") }));
+  }
+};
+await build({
+  entryPoints: [path.join(here, "src/api-client-runtime.js")],
+  outfile: path.join(out, "api-client-runtime.js"),
+  bundle: true,
+  format: "iife",
+  platform: "browser",
+  target: "chrome110",
+  minify: true,
+  legalComments: "eof",
+  nodePaths: [repoModules, path.join(here, "node_modules")],
+  plugins: [milestoneStub],
+  alias: {
+    "@devsnip": src,
+    axios: shim("axios.js"),
+    https: shim("https.js"),
+    tls: shim("tls.js"),
+    url: shim("url.js"),
+    crypto: shim("crypto.js"),
+    os: shim("os.js"),
+    path: path.join(here, "node_modules/path-browserify"),
+    vscode: shim("vscode-browser.js")
   },
   inject: [shim("globals.js")],
   define: { "process.env.NODE_ENV": '"production"', "process.platform": '"browser"', global: "globalThis" },
