@@ -1,0 +1,28 @@
+<idea-plugin>
+    <id>pro.devsnip.api</id>
+    <name>DevSnip Pro: REST API Client</name>
+    <vendor url="https://devsnip.pro">Sayaib Sarkar</vendor>
+
+    <description><![CDATA[
+    <p>A REST and GraphQL API client inside the IDE, ported from the
+    <a href="https://github.com/sayaib/DevSnip-Pro">DevSnip Pro</a> VS Code extension.</p>
+    <ul>
+      <li>Send HTTP requests with params, headers and JSON, text, form or GraphQL bodies</li>
+      <li>Bearer, Basic, API key (header or query) and OAuth 2.0 token authentication</li>
+      <li>Environments with <code>{{variables}}</code>; secret variables are kept in the IDE password safe</li>
+      <li>Status, timing, size, headers and formatted JSON responses, with clear error diagnosis</li>
+      <li>Retries with backoff, redirect limits, timeouts, proxy and SSL options, cookies</li>
+      <li>cURL import and export, request history with JSON and CSV export</li>
+    </ul>
+    <p>Open it from <b>View | Tool Windows | DevSnip API</b>.</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="DevSnip API"
+                    anchor="right"
+                    icon="/icons/devsnipApi.svg"
+                    factoryClass="pro.devsnip.api.ide.ui.ApiToolWindowFactory"/>
+    </extensions>
+</idea-plugin>
