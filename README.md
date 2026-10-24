@@ -1,0 +1,2 @@
+# DevSnip Pro for JetBrains
+
