@@ -20,6 +20,7 @@ import { SCA_SCANNER_COMMAND } from "@devsnip/sca/command";
 import { treeArguments } from "@devsnip/osv/maven/cli";
 import { gradleArguments, INIT_SCRIPT } from "@devsnip/osv/gradle/cli";
 import { getWebviewContent } from "@devsnip/commands/api-test";
+import { TOOLKIT_COMMANDS } from "@devsnip/toolkits/commands";
 
 const out = process.argv[2];
 fs.mkdirSync(out, { recursive: true });
@@ -113,6 +114,22 @@ const nav = NAV.map(section => ({
   entries: section.entries.map(entry => ({ command: COMMAND_PREFIX + entry.command, label: entry.label, tool: entry.tool ?? null }))
 }));
 write("nav.json", JSON.stringify({ prefix: COMMAND_PREFIX, sections: nav }));
+
+// ---- Toolkit commands, aliases included (an alias opens its tool with preset values) ----
+write("tool-commands.json", JSON.stringify(TOOLKIT_COMMANDS.map(c => ({ command: COMMAND_PREFIX + c.command, tool: c.tool, values: c.values ?? null }))));
+
+// ---- What the IDE's menus need from package.json: commands, settings, menus, keybindings ----
+const manifest = JSON.parse(fs.readFileSync(path.join(process.env.DEVSNIP_VSCODE_REPO_RESOLVED, "package.json"), "utf8"));
+write("contributions.json", JSON.stringify({
+  version: manifest.version,
+  commands: manifest.contributes.commands,
+  menus: manifest.contributes.menus,
+  submenus: manifest.contributes.submenus,
+  keybindings: manifest.contributes.keybindings,
+  configuration: manifest.contributes.configuration,
+  customEditors: manifest.contributes.customEditors,
+  snippets: manifest.contributes.snippets
+}));
 
 // ---- Themes ----------------------------------------------------------------
 // injectTheme's style + runtime block for every theme and surface, with its nonce made a placeholder.

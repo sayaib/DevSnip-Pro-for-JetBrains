@@ -1,0 +1,3 @@
+<idea-plugin>
+    <!-- Nothing extra: the dependency only makes JCEF's classes visible to the plugin on IDEs that ship JCEF as a plugin. -->
+</idea-plugin>

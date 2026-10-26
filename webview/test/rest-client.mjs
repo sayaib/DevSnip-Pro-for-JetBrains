@@ -20,6 +20,7 @@ import path from "path";
 import vm from "vm";
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
+import { reword } from "../wording.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -112,22 +113,26 @@ async function sendHttp(request) {
   return { status: response.status, statusText: response.statusText, headers: {}, data, responseTime: 1, size: `${text.length} B`, attempts: 1 };
 }
 
+const START_BALANCE = 100000;
+
 function referenceContext() {
   const state = new Map();
   const extensionContext = {
     globalState: { get: (k, d) => (state.has(k) ? state.get(k) : d), update: async (k, v) => { state.set(k, v); }, keys: () => [...state.keys()] },
     secrets: { get: async () => undefined, store: async () => undefined }
   };
-  class Access extends ref.FeatureAccessService {
-    check(featureId) {
-      const feature = ref.getFeature(featureId);
-      if (!feature || !feature.enabled) return super.check(featureId);
-      return { allowed: true, featureId };
-    }
-    costFor() { return 0; }
-    limitFor() { return undefined; }
-  }
-  const access = new Access(extensionContext, { balance: () => 0, spend: async () => true, refund: async () => undefined });
+  // The same points ledger as the page's: premium features cost points from the milestone stats, as in VS Code.
+  const STATS = "devsnip_user_stats";
+  state.set(STATS, { totalPoints: START_BALANCE, lifetimePoints: START_BALANCE });
+  const balance = () => state.get(STATS).totalPoints;
+  // Both sides use the milestone stand-in, which reports the balance it is given (here the reference's own).
+  const publish = () => { globalThis.__devsnipPoints = balance(); };
+  publish();
+  const access = new ref.FeatureAccessService(extensionContext, {
+    balance,
+    spend: async amount => { if (balance() < amount) return false; state.get(STATS).totalPoints -= amount; publish(); return true; },
+    refund: async amount => { state.get(STATS).totalPoints += amount; publish(); }
+  });
   const posted = [];
   return {
     posted,
@@ -137,6 +142,7 @@ function referenceContext() {
 
 // ------------------------------------------------------------- candidate
 function candidate() {
+  let balance = START_BALANCE;
   const posted = [];
   const storage = new Map();
   const streams = new Map();
@@ -147,6 +153,7 @@ function candidate() {
   };
   sandbox.globalThis = sandbox;
   sandbox.window = sandbox;
+  sandbox.__devsnipHost = { points: START_BALANCE };
   sandbox.__devsnipApiHost = {
     deliver: message => posted.push(message),
     onStream: (id, listener) => (listener ? streams.set(id, listener) : streams.delete(id)),
@@ -154,6 +161,16 @@ function candidate() {
     async rpc(method, params) {
       calls.push(method);
       if (method === "http.send") return sendHttp(params.request);
+      // The IDE asks the extension host's milestone tracker (EnginePoints.kt); here, the same arithmetic.
+      if (method === "points.spend") {
+        if (balance < params.amount) return { ok: false, balance };
+        balance -= params.amount;
+        return { ok: true, balance };
+      }
+      if (method === "points.refund") {
+        balance += params.amount;
+        return { ok: true, balance };
+      }
       if (method === "http.raw") {
         let response;
         try {
@@ -274,13 +291,19 @@ for (const message of cases) {
   }
 }
 
-// The page decides nothing about money: every feature is open and free.
+// Premium features are priced as in VS Code: the page's catalog is the extension's.
 const catalogMessages = page.posted.filter(m => m.command === "featureCatalog");
 const features = catalogMessages.at(-1).categories.flatMap(c => c.groups.flatMap(g => g.features));
-const locked = features.filter(f => f.locked || f.pointCost);
-if (!catalogMessages.length || locked.length) {
+const referenceCatalog = reference.posted.filter(m => m.command === "featureCatalog").at(-1);
+const priced = features.filter(f => f.pointCost);
+// The page's text is the extension's with the JetBrains wording (wording.mjs).
+const sameCatalog = JSON.stringify(stable(catalogMessages.at(-1))) === reword(JSON.stringify(stable(referenceCatalog)), "");
+if (!catalogMessages.length || !priced.length || !sameCatalog) {
   failures++;
-  console.error(`Catalog: ${locked.length} feature(s) still locked or priced: ${locked.map(f => f.id).join(", ")}`);
+  console.error(`Catalog: the page's prices differ from the extension's (${priced.length} priced).`);
+  const a = JSON.stringify(stable(catalogMessages.at(-1))), b = reword(JSON.stringify(stable(referenceCatalog)), "");
+  let i = 0; while (i < a.length && a[i] === b[i]) i++;
+  console.error(`  page:      …${a.slice(Math.max(0, i - 120), i + 120)}\n  extension: …${b.slice(Math.max(0, i - 120), i + 120)}`);
 }
 if (!page.api.owns({ command: "feature:jsonTools" }) || page.api.owns({ command: "feature:oauthToken" }) || page.api.owns({ command: "feature:applyOauthToken" }) || page.api.owns({ command: "testAPI" })) {
   failures++;

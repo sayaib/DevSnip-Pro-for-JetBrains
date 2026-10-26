@@ -8,7 +8,7 @@ import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.jcef.JBCefApp
-import pro.devsnip.api.ide.web.DevSnipSidebarPanel
+import pro.devsnip.api.ide.engine.DevSnipToolWindowPanel
 import pro.devsnip.api.core.toolkit.BackendApiTools
 
 /**
@@ -20,10 +20,18 @@ class ApiToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val factory = ContentFactory.getInstance()
         if (JBCefApp.isSupported()) {
-            // The DevSnip Pro sidebar, as in VS Code; tools open as editor tabs.
+            // The DevSnip Pro sidebar from the extension itself, as in VS Code; tools open as editor tabs.
             val content = factory.createContent(null, "", false)
-            content.component = DevSnipSidebarPanel(project, content)
+            val panel = DevSnipToolWindowPanel(project, content)
+            content.component = panel
             toolWindow.contentManager.addContent(content)
+            // The extension refreshes the sidebar's points and level when it becomes visible.
+            project.messageBus.connect(content).subscribe(com.intellij.openapi.wm.ex.ToolWindowManagerListener.TOPIC, object : com.intellij.openapi.wm.ex.ToolWindowManagerListener {
+                override fun stateChanged(toolWindowManager: com.intellij.openapi.wm.ToolWindowManager) {
+                    val window = toolWindowManager.getToolWindow(TOOL_WINDOW_ID) ?: return
+                    panel.view?.setVisible(window.isVisible)
+                }
+            })
             return
         }
         // Fallback for IDEs without the embedded browser: the natively ported tools as tabs.

@@ -25,7 +25,13 @@ import javax.swing.JComponent
  * VS Code webview: the page posts JSON to [onMessage]; [post] delivers JSON
  * to the page as a `message` event (queued until the page has loaded).
  */
-class DevSnipBrowser(parent: Disposable, private val surface: String, private val onMessage: (JsonObject) -> Unit) : Disposable {
+class DevSnipBrowser(
+    parent: Disposable,
+    private val surface: String,
+    /** False for pages of the extension host, which themes them itself. */
+    val native: Boolean = true,
+    private val onMessage: (JsonObject) -> Unit,
+) : Disposable {
     private val browser: JBCefBrowser = JBCefBrowser.createBuilder().build()
     private val query: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
     private val queue = mutableListOf<String>()
@@ -52,7 +58,11 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
                 LOG.warn("DevSnip Pro: ignored a malformed page message")
                 null
             }
-            if (message != null) ApplicationManager.getApplication().invokeLater { if (!disposed) onMessage(message) }
+            if (message != null && message["type"]?.takeIf { it.isJsonPrimitive }?.asString == "__probe") {
+                probes.remove(message["id"]?.asInt)?.complete(message)
+            } else if (message != null) {
+                ApplicationManager.getApplication().invokeLater { if (!disposed) onMessage(message) }
+            }
             null
         }
         browser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
@@ -101,6 +111,18 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
         if (!disposed) browser.cefBrowser.executeJavaScript(script, browser.cefBrowser.url, 0)
     }
 
+    private val probes = java.util.concurrent.ConcurrentHashMap<Int, java.util.concurrent.CompletableFuture<com.google.gson.JsonObject>>()
+    private val nextProbe = java.util.concurrent.atomic.AtomicInteger(1)
+
+    /** Evaluates an expression in the page (diagnostics): completes with { result } or { error }. */
+    fun probe(expression: String): java.util.concurrent.CompletableFuture<com.google.gson.JsonObject> {
+        val id = nextProbe.getAndIncrement()
+        val future = java.util.concurrent.CompletableFuture<com.google.gson.JsonObject>()
+        probes[id] = future
+        execute(PROBE_SCRIPT.replace("__ID__", id.toString()).replace("__EXPR__", expression))
+        return future
+    }
+
     /** Re-applies the IDE's colours (System Default follows the IDE theme, as it follows VS Code's). */
     fun refreshIdeTheme() {
         val css = WebviewAssets.embed(com.google.gson.JsonPrimitive(IdeThemeCss.css(surface)))
@@ -126,6 +148,10 @@ class DevSnipBrowser(parent: Disposable, private val surface: String, private va
     companion object {
         private val LOG = Logger.getInstance(DevSnipBrowser::class.java)
         private val NEXT_INSTANCE = java.util.concurrent.atomic.AtomicLong()
+
+        const val PROBE_SCRIPT = "(function(){var send=function(m){window.__devsnipQuery(JSON.stringify(m))};" +
+            "try{Promise.resolve(__EXPR__).then(function(r){send({type:'__probe',id:__ID__,result:typeof r==='string'?r:JSON.stringify(r)})},function(e){send({type:'__probe',id:__ID__,error:String(e)})})}" +
+            "catch(e){send({type:'__probe',id:__ID__,error:String(e)})}})();"
 
         /** Every open DevSnip Pro page, so theme changes reach all of them. */
         val OPEN: MutableSet<DevSnipBrowser> = CopyOnWriteArraySet()

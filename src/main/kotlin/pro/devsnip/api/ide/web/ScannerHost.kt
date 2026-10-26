@@ -106,8 +106,10 @@ class ScannerHost(private val project: Project, val page: String, private val po
     // ------------------------------------------------------------ bootstrap
 
     /** window.__devsnipHost for the page: what VS Code would know about the workspace, the machine and the settings. */
-    fun hostInfo(): JsonObject = JsonObject().apply {
+    fun hostInfo(scan: ScanRequest = ScanRequest(false, emptyList())): JsonObject = JsonObject().apply {
         addProperty("page", page)
+        addProperty("run", scan.run)
+        add("files", scanFiles(scan))
         addProperty("platform", if (SystemInfo.isWindows) "win32" else if (SystemInfo.isMac) "darwin" else "linux")
         addProperty("home", canonical(HOME))
         addProperty("tmpdir", canonical(TEMP))
@@ -130,6 +132,23 @@ class ScannerHost(private val project: Project, val page: String, private val po
                 runCatching { if (Files.isRegularFile(settings)) addProperty(canonical(settings), Files.readString(settings)) }
             })
         })
+    }
+
+    /** The files a scan was asked for; they may be read from now on, like files picked in a dialog. */
+    private fun scanFiles(scan: ScanRequest) = JsonArray().apply {
+        for (file in scan.files) {
+            val path = normalize(file)
+            picked.add(path)
+            add(canonical(path))
+        }
+    }
+
+    /** "__scan": scan again in an open tab (osvScanWorkspace / osvScanFile on an open panel). */
+    fun scanMessage(scan: ScanRequest): JsonObject = JsonObject().apply {
+        addProperty("type", "__scan")
+        addProperty("run", scan.run)
+        add("files", scanFiles(scan))
+        add("facts", facts(scan.files.flatMap { wrappersAbove(if (Files.isDirectory(it)) it else it.parent) }))
     }
 
     fun setVisible(visible: Boolean) = post(JsonObject().apply { addProperty("type", "__visibility"); addProperty("visible", visible) })
@@ -792,6 +811,10 @@ object ScannerLogs {
     }
 
     fun text(channel: String): String = logs[channel]?.let { synchronized(it) { it.toString() } } ?: ""
+
+    fun clear(channel: String) {
+        logs[channel]?.let { synchronized(it) { it.setLength(0) } }
+    }
 
     fun show(project: Project, channel: String) {
         val manager = FileEditorManager.getInstance(project)

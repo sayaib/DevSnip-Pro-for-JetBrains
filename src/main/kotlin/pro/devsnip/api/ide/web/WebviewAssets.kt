@@ -24,7 +24,7 @@ object WebviewAssets {
     private const val DATA_MARKER = "__DEVSNIP_DATA__"
     private val STATIC = listOf(
         "bridge.js", "tools-sidebar.js", "toolkit.js", "toolkit-runtime.js", "api-client-runtime.js", "codicon.css", "codicon.ttf",
-        "osv-scanner.js", "sca-scanner.js", "sca-model.js", "scanner-runtime.js",
+        "osv-scanner.js", "sca-scanner.js", "sca-model.js", "scanner-runtime.js", "host-runtime.js",
     )
 
     /** Escapes like the extension's embedJson: safe inside an inline <script>. */
@@ -186,18 +186,11 @@ object WebviewAssets {
     /**
      * The REST API Client: the extension's own page (getWebviewContent). Its
      * feature system runs in the page (api-client-runtime.js); requests go to
-     * the IDE. The points balance and prices belong to Milestones & rewards,
-     * which the IDE does not have yet, so they are hidden (every feature is
-     * available). The WebSocket tool may connect, as for an entitled VS Code user.
+     * the IDE. Premium features cost points from the extension host, as in
+     * VS Code. The WebSocket tool may connect.
      */
-    fun restClientHtml(state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path {
-        val hidePoints = "<style>#pointsBadge,.cost-tag,#featureTierPill,#featureUpgradeBtn,#view-points{display:none !important}</style>"
-        return write(
-            "rest-client",
-            instance,
-            assemble(restClientShell, state.theme, "panel", host, query, extraHead = hidePoints, scripts = listOf("api-client-runtime.js", "bridge.js"), connect = "ws: wss:"),
-        )
-    }
+    fun restClientHtml(state: DevSnipUiState, host: JsonObject, query: String, instance: String = ""): Path =
+        write("rest-client", instance, assemble(restClientShell, state.theme, "panel", host, query, scripts = listOf("api-client-runtime.js", "bridge.js"), connect = "ws: wss:"))
 
     /**
      * Adds what VS Code adds around a webview: the theme (extension's
@@ -205,7 +198,8 @@ object WebviewAssets {
      * class for light or dark, plus the bridge. The CSP allows only this
      * page's own files and inline styles.
      */
-    private fun assemble(html: String, themeId: String, surface: String, host: JsonObject, query: String, extraHead: String = "", scripts: List<String>, connect: String = "'none'"): String {
+    private fun assemble(html: String, storedTheme: String, surface: String, host: JsonObject, query: String, extraHead: String = "", scripts: List<String>, connect: String = "'none'"): String {
+        val themeId = pro.devsnip.api.ide.engine.DevSnipNative.liveTheme ?: storedTheme
         val theme = themes.getAsJsonObject("blocks").getAsJsonObject(validTheme(themeId))[surface].asString.replace("__DEVSNIP_NONCE__", "devsnip")
         val csp = "default-src 'none'; style-src 'unsafe-inline' file:; script-src 'unsafe-inline' file:; font-src file: data:; img-src file: data: https:; connect-src $connect;"
         val head = "<style id=\"devsnip-ide-theme\" data-surface=\"$surface\">${IdeThemeCss.css(surface)}</style>$extraHead" +

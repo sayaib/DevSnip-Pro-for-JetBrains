@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.0.0] - 2026-10-26
+
+The rest of DevSnip Pro for VS Code: every command, page and workflow of the extension (11.81.1) now runs in JetBrains IDEs. See docs/MIGRATION.md for the feature-by-feature map.
+
+### Added
+- **Extension host**: the VS Code extension's own code runs in a hidden page of the IDE's embedded browser, one per project, with the IDE providing what VS Code would (files, editors, dialogs, terminals, processes, HTTP, password safe). Its pages open as editor tabs.
+- **Tools sidebar from the extension**: rank card, points and level, onboarding guide, What's New card, theme picker with locked themes and previews.
+- **Milestones & Points**: points for every tool run (from any menu), daily check-in and bonus, streaks and streak freezes, levels, milestones, daily quests, weekly events and recap, lucky finds, daily spin, quiz and Bit Sprint, rewards, mystery boxes, cosmetics, theme unlocks and the Points & Premium Features page.
+- **REST API Client points**: premium features cost points and refund on failure, as in VS Code (they were free in 0.1.x).
+- **Code & Productivity**: Saved Snippets, Create Snippet (from the selection), Framework Snippets, Clean Debug Logs, Remove Unused Imports, README Viewer & Manager, Dependencies & Installation (npm, pnpm, Yarn, Bun, pip, Poetry, uv, Maven, Gradle, NuGet, pub), Unused Dependencies.
+- **Debug logs**: Insert Debug Log (Ctrl+Alt+Shift+L on macOS) and Remove Debug Logs in This File for JS/TS, Python, Java, Kotlin, C#, Dart and Swift.
+- **Snippets in code completion**: the framework snippets (type `ds-`) and your own snippets, expanded as live templates with VS Code's tab stops, choices and variables.
+- **Security**: Security Hub, Workspace Security Audit, Cloud & Container Audit, Dependency & Config Check and Endpoint Security Scan.
+- **Database Client**: PostgreSQL, CockroachDB, MySQL, MariaDB, SQL Server, Oracle, SQLite, ClickHouse, MongoDB and Redis, with the extension's explorer, grid editing, query console and connection store (passwords in the IDE password safe). Drivers: JDBC, the MongoDB Java driver and Jedis; SQLite runs in the IDE.
+- **CSV & Excel viewer**: .xlsx/.xlsm open in the viewer; .csv/.tsv/.tab get a Table tab. Editing with undo/redo, Save and Save All.
+- **Browse All Tools**, **Search All Tools (Regex)**, **Choose Theme**, **Get Started** (the walkthrough) and **What's New**.
+- **Menus and shortcuts**: every command in Find Action and Tools | DevSnip Pro; the editor's DevSnip Pro submenu and the Project view's Scan for Vulnerabilities (OSV) and Open in CSV & Excel Viewer, shown as package.json's `when` clauses say.
+- **Settings | Tools | DevSnip Pro** with the extension's settings (names, defaults and limits from package.json).
+- **Anonymous usage statistics** (the extension's analytics), off unless you turn on "Share anonymous usage statistics".
+
+### Fixed
+- IntelliJ-based IDEs 2026.2 and later, where the embedded browser (JCEF) is a bundled plugin and runs out of process: the sidebar, tools, scanners, REST API Client and every page now work there (0.1.x pages failed to load on those versions).
+
+### Changed
+- The scanners' Scan Workspace and Scan for Vulnerabilities (files or folders) start a scan straight away, as in VS Code.
+- Pages say "the IDE", "Find Action" and "Project view" where the extension's text named VS Code's UI.
+- The plugin is larger (about 30 MB) because it bundles the database drivers.
+- The OpenCode Integration is not included.
+
 ## [0.1.2] - 2026-10-25
 
 Compatibility with IntelliJ IDEA 2026.3 EAP: no deprecated or scheduled-for-removal platform APIs (Plugin Verifier, 263.7307.44).

@@ -7,10 +7,10 @@
  * IDE (ScannerHost.kt) does the I/O: files, HTTP, build tools, dialogs.
  */
 import "./scanner-fetch.js";
-import { extensionContext, panelHooks } from "vscode";
+import { extensionContext, panelHooks, Uri } from "vscode";
 import { openOsvScanner, osvSessionForTests } from "@devsnip/osv/panel";
 import { openScaScanner, scaSessionForTests } from "@devsnip/sca/panel";
-import { rpc } from "../shims/host-rpc.js";
+import { addFacts, onHostEvent, rpc } from "../shims/host-rpc.js";
 
 function keepLastResult(page) {
   // The IDE keeps the latest result for the project, so reopening the tab shows it (as the extension's session does).
@@ -23,6 +23,12 @@ function keepLastResult(page) {
   };
 }
 
+/** The command's options: scan the workspace now (osvScanWorkspace, scaScanWorkspace) or these files (osvScanFile). */
+function scanOptions(request) {
+  const files = Array.isArray(request.files) ? request.files.map(p => Uri.file(p)) : [];
+  return files.length ? { files } : request.run ? { run: true } : {};
+}
+
 globalThis.DevSnipScanners = {
   /** Opens the page's scanner, as the extension's command does, with the project's last result. */
   start(page) {
@@ -32,17 +38,25 @@ globalThis.DevSnipScanners = {
     keepLastResult(page);
     if (page === "osv") {
       if (saved.result) osvSessionForTests().result = saved.result;
-      return openOsvScanner(context, info.run ? { run: true } : {});
+      return openOsvScanner(context, scanOptions(info));
     }
     if (page === "sca") {
       const session = scaSessionForTests();
       if (saved.result) session.result = saved.result;
       if (saved.projects) session.projects = saved.projects;
-      return openScaScanner(context, info.run ? { run: true } : {});
+      return openScaScanner(context, scanOptions(info));
     }
     return Promise.reject(new Error(`Unknown scanner ${page}`));
   }
 };
+
+/** The command run again on the open tab: the extension's openOsvScanner / openScaScanner on an open panel. */
+onHostEvent("__scan", message => {
+  addFacts(message.facts);
+  const page = (globalThis.__devsnipHost || {}).page;
+  const run = page === "osv" ? openOsvScanner : page === "sca" ? openScaScanner : null;
+  if (run) run(extensionContext(), scanOptions(message)).catch(error => console.error("DevSnip Pro: the scan could not start.", error));
+});
 
 // The panel opens before the page's own script asks for "ready" (bridge.js and this file load in the head).
 const page = (globalThis.__devsnipHost || {}).page;

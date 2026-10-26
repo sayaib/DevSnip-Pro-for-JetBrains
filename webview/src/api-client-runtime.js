@@ -9,15 +9,14 @@
  * - sendHttp: the client's own sender, in the IDE (shared cookies, history);
  * - collections and the other global state: kept by the IDE;
  * - HTTP made by the services (axios) and TLS probes: sent by the IDE;
- * - access: every feature is available, since Milestones & rewards (the
- *   points balance) are not ported to the IDE yet.
+ * - access: premium features cost points from the extension host's
+ *   milestone tracker, as in VS Code.
  *
  * OAuth token requests are answered by the IDE itself (feature:oauthToken /
  * feature:applyOauthToken), so access tokens stay in the IDE password safe.
  */
 import { buildCatalog, handleFeatureMessage } from "@devsnip/commands/api-client-features";
 import { FeatureAccessService } from "@devsnip/premium/feature-access";
-import { getFeature } from "@devsnip/premium/feature-registry";
 import { CollectionStore } from "@devsnip/services/collections";
 
 const HOST_COMMANDS = new Set(["feature:oauthToken", "feature:applyOauthToken"]);
@@ -42,26 +41,33 @@ const globalState = {
   }
 };
 
-/** Every known, enabled feature may run, free and without daily limits. */
-class IdeFeatureAccess extends FeatureAccessService {
-  check(featureId) {
-    const feature = getFeature(featureId);
-    if (!feature || !feature.enabled) return super.check(featureId);
-    return { allowed: true, featureId };
-  }
-
-  costFor() {
-    return 0;
-  }
-
-  limitFor() {
-    return undefined;
-  }
+/**
+ * Premium features cost points, as in VS Code: the balance is the extension
+ * host's (the IDE keeps this page's copy current), and spending or refunding
+ * goes to the extension's milestone tracker through the IDE.
+ */
+let balance = 0;
+/** The page's copy of the balance (the milestone stand-in reads it for "remaining points"). */
+function setBalance(value) {
+  balance = Number(value) || 0;
+  globalThis.__devsnipPoints = balance;
 }
+setBalance((globalThis.__devsnipHost || {}).points);
+const ledger = {
+  balance: () => balance,
+  async spend(amount, reason) {
+    const answer = await bridge().rpc("points.spend", { amount, reason });
+    if (typeof answer?.balance === "number") setBalance(answer.balance);
+    return answer?.ok === true;
+  },
+  async refund(amount, reason) {
+    const answer = await bridge().rpc("points.refund", { amount, reason });
+    if (typeof answer?.balance === "number") setBalance(answer.balance);
+  }
+};
 
 const extensionContext = { globalState, workspaceState: globalState, subscriptions: [] };
-const ledger = { balance: () => 0, spend: async () => true, refund: async () => undefined };
-const access = new IdeFeatureAccess(extensionContext, ledger);
+const access = new FeatureAccessService(extensionContext, ledger);
 const collections = new CollectionStore(extensionContext, access);
 
 const featureContext = {
@@ -72,33 +78,11 @@ const featureContext = {
   sendHttp: (request, options) => bridge().rpc("http.send", { request, background: Boolean(options && options.background) })
 };
 
-/** The catalog as the page renders it: no prices, no balance (there is nothing to pay). */
-function catalog() {
-  const result = buildCatalog(featureContext);
-  for (const category of result.categories) {
-    for (const group of category.groups) {
-      for (const feature of group.features) {
-        feature.locked = false;
-        feature.pointCost = 0;
-        delete feature.reason;
-        delete feature.message;
-        delete feature.pointsShort;
-        delete feature.limit;
-      }
-    }
-  }
-  result.pointBalance = 0;
-  return result;
-}
-
-const originalPost = featureContext.post;
-featureContext.post = message => {
-  if (message && message.command === "featureCatalog") {
-    const { command: _command, ...rest } = message;
-    originalPost({ command: "featureCatalog", ...rest, ...catalog() });
-    return;
-  }
-  originalPost(message);
+/** The balance changed elsewhere (a tool run, the milestone page): the badge and the catalog's prices follow it. */
+globalThis.__devsnipInternal = message => {
+  if (!message || message.type !== "__points") return;
+  setBalance(message.balance);
+  bridge().deliver({ command: "showPoints", points: balance });
 };
 
 globalThis.DevSnipApiClient = {
@@ -113,5 +97,5 @@ globalThis.DevSnipApiClient = {
       featureContext.post({ command: "featureError", featureId: String(message.featureId || message.command), error: error instanceof Error ? error.message : String(error) });
     });
   },
-  catalog
+  catalog: () => buildCatalog(featureContext)
 };

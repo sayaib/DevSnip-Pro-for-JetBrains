@@ -8,7 +8,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import pro.devsnip.api.ide.web.DevSnipActionsRegistrar
+import pro.devsnip.api.ide.engine.DevSnipActions
 import pro.devsnip.api.ide.web.DevSnipUiState
 import pro.devsnip.api.ide.web.EditorTracker
 import pro.devsnip.api.ide.web.WebviewAssets
@@ -51,23 +51,31 @@ class IdeIntegrationTest : BasePlatformTestCase() {
     fun `test the generated actions are removed before unloading and come back on load`() {
         val manager = ActionManager.getInstance()
         val id = "DevSnipPro.osvScanner"
-        DevSnipActionsRegistrar.registerOnce()
+        DevSnipActions.registerOnce()
         assertNotNull(manager.getAction(id))
         val menu = manager.getAction("DevSnipPro.ToolsMenu") as DefaultActionGroup
-        val sections = menu.childActionsOrStubs.count { it is DefaultActionGroup }
-        assertEquals(13, sections)
+        val groups = menu.childActionsOrStubs.count { it is DefaultActionGroup }
+        // The sidebar's 14 sections, plus More for the commands the sidebar does not list.
+        assertTrue("sections: $groups", groups >= 14)
 
-        DevSnipActionsRegistrar.unregisterAll()
+        DevSnipActions.unregisterAll()
         assertNull(manager.getAction(id))
         assertEquals(0, menu.childActionsOrStubs.count { it is DefaultActionGroup })
 
-        DevSnipActionsRegistrar.registerOnce()
-        DevSnipActionsRegistrar.registerOnce()
+        DevSnipActions.registerOnce()
+        DevSnipActions.registerOnce()
         val action = manager.getAction(id)
         assertNotNull(action)
         assertEquals("DevSnip Pro: OSV Vulnerability Scanner", action.templatePresentation.text)
-        assertEquals("registering twice adds nothing", sections, menu.childActionsOrStubs.count { it is DefaultActionGroup })
-        assertEquals(WebviewAssets.supportedCommands.size, WebviewAssets.supportedCommands.count { manager.getAction("DevSnipPro." + it.removePrefix(WebviewAssets.COMMAND_PREFIX)) != null })
+        assertEquals("registering twice adds nothing", groups, menu.childActionsOrStubs.count { it is DefaultActionGroup })
+        // Every command VS Code's command palette shows has an action (development-only ones excepted).
+        assertEquals(DevSnipActions.commands.size, DevSnipActions.commands.count { manager.getAction("DevSnipPro." + it.id.removePrefix(WebviewAssets.COMMAND_PREFIX)) != null })
+        assertNull(manager.getAction("DevSnipPro.resetFeatureUsage"))
+        // The shortcut action from plugin.xml is the one Find Action shows.
+        assertTrue(manager.getAction("DevSnipPro.insertDebugLog") is pro.devsnip.api.ide.engine.InsertDebugLogAction)
+        // The editor and Project view menus are filled from package.json.
+        assertTrue((manager.getAction("DevSnipPro.EditorContext") as DefaultActionGroup).childrenCount >= 15)
+        assertTrue((manager.getAction("DevSnipPro.ProjectViewContext") as DefaultActionGroup).childrenCount >= 3)
     }
 
     fun `test the IDE can install, update and unload the plugin without a restart`() {

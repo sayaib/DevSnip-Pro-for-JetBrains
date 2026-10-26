@@ -192,7 +192,7 @@
         ], { title: "More actions" }))
     ]);
     slots.header.appendChild(h("p", { class: "privacy" }, icon("lock"),
-      h("span", null, "Only package names, versions and ecosystems are sent to api.osv.dev. Source code, file contents, paths and credentials never leave VS Code, and nothing is changed without your confirmation.")));
+      h("span", null, "Only package names, versions and ecosystems are sent to api.osv.dev. Source code, file contents, paths and credentials never leave the IDE, and nothing is changed without your confirmation.")));
   }
 
   function renderStatus() {

@@ -56,7 +56,16 @@ class RestClientHost(
     private val post: (JsonObject) -> Unit,
     private val background: (() -> Unit) -> Unit,
     private val rawHttp: RawHttp = RawHttp(),
+    /** The points ledger (the extension host's milestone tracker); null where it cannot run, and nothing is charged. */
+    private val points: PointsLedger? = null,
 ) {
+    /** Spends and refunds points, and reads the balance, for the page's premium features. */
+    interface PointsLedger {
+        fun balance(): Int
+        fun spend(amount: Int, reason: String): java.util.concurrent.CompletableFuture<Boolean>
+        fun refund(amount: Int, reason: String): java.util.concurrent.CompletableFuture<Unit>
+    }
+
     /** The Send button's request: a new Send (or a chained step) replaces it, as the client's cancel token does. */
     @Volatile
     private var current: CancellationToken? = null
@@ -125,8 +134,7 @@ class RestClientHost(
                 service.activeEnvironmentIndex = message.num("index")?.toInt() ?: -1
                 sendEnvironments("environmentActivated")
             }
-            // Milestones & rewards are not ported: there is no balance, and no feature needs one.
-            "getPoints" -> send("showPoints") { addProperty("points", 0) }
+            "getPoints" -> send("showPoints") { addProperty("points", points?.balance() ?: 0) }
             "feature:oauthToken" -> oauthToken(message)
             "feature:applyOauthToken" -> applyOauthToken(message)
             else -> if (command.isNotEmpty()) LOG.debug("REST client: ignored message \"$command\"")
@@ -467,6 +475,21 @@ class RestClientHost(
                 JsonNull.INSTANCE
             }
             "http.raw" -> background { sendRaw(params) { result, error -> reply(result, error) } }
+            "points.spend", "points.refund" -> {
+                val ledger = points
+                val amount = params.num("amount")?.toInt() ?: 0
+                val reason = params.str("reason").ifEmpty { "REST API Client" }
+                if (ledger == null) {
+                    // No extension host (no points system): nothing is charged.
+                    reply(JsonObject().apply { addProperty("ok", true); addProperty("balance", 0) }, null)
+                } else {
+                    val done: java.util.concurrent.CompletableFuture<Boolean> = if (method == "points.spend") ledger.spend(amount, reason) else ledger.refund(amount, reason).thenApply { true }
+                    done.whenComplete { ok, error ->
+                        if (error != null) reply(null, RpcError(error.message ?: "Points are not available.", null))
+                        else reply(JsonObject().apply { addProperty("ok", ok == true); addProperty("balance", ledger.balance()) }, null)
+                    }
+                }
+            }
             else -> background {
                 guarded {
                     when (method) {

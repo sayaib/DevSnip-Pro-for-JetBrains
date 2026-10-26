@@ -238,7 +238,7 @@
     results.replaceChildren(h("div", { class: "empty" },
       icon("spark"),
       h("div", { class: "t", text: needs ? `Add ${needs} to get started` : tool.live ? "Results appear here as you type" : `Press ${tool.runLabel || "Run"} to see results` }),
-      h("div", { text: examples.length ? "Or pick one of the Presets to try it with sample data." : "Everything runs locally in VS Code unless the tool says otherwise." })));
+      h("div", { text: examples.length ? "Or pick one of the Presets to try it with sample data." : "Everything runs locally in the IDE unless the tool says otherwise." })));
   }
 
   const toneOf = t => (t === "good" || t === "warn" || t === "bad" ? t : "");

@@ -73,8 +73,8 @@ class WebviewAssetsTest : BasePlatformTestCase() {
         // The IDE's CSP (inline scripts, local files, WebSockets for the WebSocket tool); no nonce-only CSP is left.
         assertTrue(html.contains("connect-src ws: wss:;"))
         assertFalse(html.contains("'nonce-"))
-        // Points belong to Milestones & rewards, not ported: hidden, every feature open.
-        assertTrue(html.contains("#pointsBadge,.cost-tag"))
+        // Premium features cost points, as in VS Code: the balance badge and prices are shown.
+        assertFalse(html.contains("#pointsBadge,.cost-tag{display:none"))
         assertTrue(html.contains("id=\"devsnip-theme\""))
         assertTrue(Files.exists(WebviewAssets.directory.resolve("api-client-runtime.js")))
         copyPreview(page)

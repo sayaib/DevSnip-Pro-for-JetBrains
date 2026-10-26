@@ -234,7 +234,7 @@
         ], { title: "More actions" }))
     ]);
     slots.header.appendChild(h("p", { class: "privacy" }, icon("lock"),
-      h("span", null, "Sent: package names and versions (OSV.dev and package registries) and CVE ids (NVD). The CISA KEV catalog is downloaded and matched locally. Source code, file contents and credentials never leave VS Code, and no file changes without your confirmation.")));
+      h("span", null, "Sent: package names and versions (OSV.dev and package registries) and CVE ids (NVD). The CISA KEV catalog is downloaded and matched locally. Source code, file contents and credentials never leave the IDE, and no file changes without your confirmation.")));
   }
 
   // ------------------------------------------------------------------ projects

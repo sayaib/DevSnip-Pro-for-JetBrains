@@ -1,13 +1,14 @@
 /*
- * Stand-in for src/commands/milestoneTracker in the REST API Client bundle.
- * Milestones & rewards (the points balance) are not ported to the IDE yet;
- * every REST client feature is available there, so nothing is charged.
+ * Stand-in for src/commands/milestoneTracker in the REST API Client bundle:
+ * the balance is the extension host's (api-client-runtime.js keeps it); the
+ * page's own code only reads it.
  */
-export function getUserStats() {
-  return { totalPoints: 0 };
-}
 export function getPointsBalance() {
-  return 0;
+  const live = globalThis.__devsnipPoints;
+  return Number(live !== undefined ? live : (globalThis.__devsnipHost || {}).points) || 0;
+}
+export function getUserStats() {
+  return { totalPoints: getPointsBalance() };
 }
 export function onDidChangePoints() {
   return { dispose() {} };

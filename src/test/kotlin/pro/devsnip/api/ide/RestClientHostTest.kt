@@ -399,7 +399,7 @@ class RestClientHostTest {
     }
 
     @Test
-    fun `points are not part of the IDE`() {
+    fun `without an extension host there is no balance and nothing is charged`() {
         send("""{"command":"getPoints"}""")
         assertEquals(0, await("showPoints")["points"].asInt)
     }

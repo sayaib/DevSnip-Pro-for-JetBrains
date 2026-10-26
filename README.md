@@ -1,294 +1,324 @@
 # DevSnip Pro for JetBrains
 
-DevSnip Pro for IntelliJ IDEA and the other JetBrains IDEs, with the same
-look, sidebar and tools as the
-[DevSnip Pro VS Code extension](https://github.com/sayaib/DevSnip-Pro). The
-VS Code extension is the single source of truth for the UI and the toolkit;
-it is not modified.
+**DevSnip Pro: API Client & Developer Toolkit** for IntelliJ IDEA and every other
+IntelliJ-based IDE (WebStorm, PyCharm, GoLand, Rider, PhpStorm, Android Studio, …).
 
-## Install and configure
+It brings the full [DevSnip Pro VS Code extension](https://github.com/sayaib/DevSnip-Pro)
+to JetBrains IDEs, with the same look, the same Tools sidebar and the same results:
 
-1. **Install:** *Settings | Plugins | Marketplace*, search for "DevSnip Pro". For a ZIP
-   (`build/distributions/devsnip-pro-jetbrains-0.1.2.zip`): *Settings | Plugins | ⚙ |
-   Install Plugin from Disk…*. No restart is needed.
-2. **Open it:** the **DevSnip Pro** tool window (right side), *Tools | DevSnip Pro*, or
-   *Find Action* (⌘⇧A / Ctrl+Shift+A) and type "DevSnip Pro: …".
-3. **Configure** (all optional; nothing is needed to start):
-   - *REST API Client*: its Settings tab (timeout, retries, redirects, SSL, proxy) and the
-     environment picker for `{{variables}}`. Secret-looking variables go to the IDE password safe.
-   - *Scanners*: *Settings | Tools | DevSnip Pro Scanners* (Maven/Gradle resolution, POM
-     downloads, health checks, KEV and NVD lookups). An NVD API key is optional; the scanners
-     ask for it and keep it in the password safe.
-   - *Theme*: the theme button at the top of the sidebar. *System Default* follows the IDE theme.
+- a REST, GraphQL and WebSocket client
+- a database client for ten databases
+- vulnerability and dependency scanners
+- a CSV & Excel editor
+- snippets in code completion
+- debug-log tools
+- 100 developer tools, from cURL conversion to RAG planning
 
-Requirements: an IntelliJ-based IDE 2024.1 or newer. The sidebar, toolkit and scanners use the
-IDE's embedded browser (JCEF), which every standard JetBrains IDE has; without it the tool window
-offers the REST API Client and the seven Backend & API tools as native tabs.
+Everything runs locally in the IDE. No account, API key or DevSnip server is needed.
 
-## How it looks and works like the VS Code extension
+---
 
-DevSnip Pro's UI in VS Code is a set of webviews (HTML, CSS and JavaScript)
-styled with VS Code's theme variables and DevSnip's own themes. The plugin
-shows **those same pages** in the IDE's embedded Chromium (JCEF):
+## Contents
 
-- **Tools sidebar** (tool window *DevSnip Pro*): the extension's own sidebar
-  page with its 14 sections, search (⌘K / Ctrl+K), filters, favourites,
-  recently and most used, hover cards and the theme picker.
-- **Tools** open as editor tabs, as VS Code opens them as panels: the
-  extension's toolkit workbench (form, presets, Use editor, live results,
-  stats, outputs with Copy / Insert / Open / Save / Save as / Write to
-  workspace).
-- **Themes**: *System Default* follows the IDE theme (IntelliJ colours are
-  mapped onto the `--vscode-*` variables the pages use, live on theme change);
-  the 12 DevSnip themes (Dark, Midnight, Dracula, Monokai, Nord, Cyberpunk,
-  Solarized, Ember, Synthwave, Aurora, Light, High Contrast) restyle every
-  open page at once.
-- **Same tool code**: the ~100 toolkit tools run the extension's own
-  TypeScript, bundled for the browser. Node's `crypto` is provided by a
-  shim (`webview/shims/crypto.js`); `webview/test/parity.mjs` checks every tool
-  (249 cases) and 50 key/certificate cross-checks against real Node: all match.
-- **IDE conventions**: every tool is in *Find Action* / *Search Everywhere*
-  ("DevSnip Pro: …") and under *Tools | DevSnip Pro*; files are written
-  through the IDE (undoable, with an overwrite prompt); links open in the
-  system browser.
-- **REST API Client**: the extension's own client page (request tabs,
-  collections, history, environments, cookies, cURL, the response viewer and
-  the Software Developer / AI & ML tools), in an editor tab. Its requests are
-  sent by the plugin's Kotlin engine; see [REST API Client](#rest-api-client).
-- **Without JCEF** (rare: some remote setups) the tool window falls back to
-  native Swing tabs: the native REST API Client and the seven natively ported
-  Backend & API tools.
+- [Getting started](#getting-started)
+- [Features](#features)
+  - [Tools sidebar](#tools-sidebar)
+  - [REST API Client](#rest-api-client)
+  - [Database Client](#database-client)
+  - [Security scanners](#security-scanners)
+  - [CSV & Excel viewer](#csv--excel-viewer)
+  - [Code & productivity](#code--productivity)
+  - [Debug logs](#debug-logs)
+  - [Developer toolkit (100 tools)](#developer-toolkit-100-tools)
+  - [Points, milestones and themes](#points-milestones-and-themes)
+- [Where to find everything](#where-to-find-everything)
+- [Settings](#settings)
+- [Privacy and security](#privacy-and-security)
+- [Requirements and compatibility](#requirements-and-compatibility)
+- [Known limitations](#known-limitations)
+- [Development](#development)
+- [Publishing](#publishing)
+- [Project layout](#project-layout)
+- [Third-party components](#third-party-components)
 
-### Available now
+---
+
+## Getting started
+
+1. **Install.** In *Settings | Plugins | Marketplace*, search for **DevSnip Pro**. To install
+   a downloaded ZIP instead, use *Settings | Plugins | ⚙ | Install Plugin from Disk…*. No
+   restart is needed.
+2. **Open it.** Use the **DevSnip Pro** tool window on the right, *Tools | DevSnip Pro*, or
+   *Find Action* (⌘⇧A / Ctrl+Shift+A) and type `DevSnip Pro`.
+3. **Take the tour.** *DevSnip Pro: Get Started* walks through sending a request, trying
+   an AI tool, running a security scan, connecting a database and saving a snippet.
+
+Nothing has to be configured first. Every tool works with its defaults.
+
+## Features
+
+### Tools sidebar
+
+The **DevSnip Pro** tool window holds the Tools sidebar:
+
+- 14 sections with every tool
+- search (⌘K / Ctrl+K)
+- filters, favourites, and recently and most used tools
+- hover cards with a description of each tool
+- a rank card with points and level
+- an onboarding guide, a What's New card and the theme picker
+
+Tools open as editor tabs. **Browse All Tools** opens the full catalogue, and **Search All
+Tools** finds a tool by name or regular expression. The **Security Hub** and **Browse AI & ML
+Tools** gather the tools of their area on one page.
+
+### REST API Client
+
+A full API client in an editor tab.
+
+**Requests**
+- Any HTTP method, with params, headers and auth: Bearer, Basic, API key and OAuth 2.0.
+- JSON, text, form and GraphQL bodies.
+- Request tabs, saved requests, collections (import and export), and history (redacted,
+  exportable as JSON or CSV).
+- Environments with `{{variables}}`, and cookies.
+- cURL import and export.
+
+**Responses**
+- A response viewer with search, timing and size.
+- Each network error gets a plain explanation and a **Fix in…** button.
+
+**Testing tools**
+- Assertions, batch tests, response diff and request chaining.
+- Load tests, mock generator, SDK export and code generation.
+- JWT inspector, OAuth 2.0 helper, WebSocket client and endpoint security scan.
+
+**AI & ML tools**
+- LLM requests and streaming.
+- Model comparison and benchmarks.
+- Embeddings, vector search, RAG, and agent and prompt tests.
+
+Requests are sent by the plugin's own engine, using the IDE's proxy settings. The
+defaults are a 30 s timeout, retries on 429/502/503/504, 5 redirects and SSL
+verification; all of them can be changed in the client's Settings tab. Secret-looking
+environment variables and OAuth tokens are kept in the IDE password safe.
+
+### Database Client
+
+Supported databases: **PostgreSQL, CockroachDB, MySQL, MariaDB, SQL Server, Oracle, SQLite,
+ClickHouse, MongoDB and Redis**.
+
+- An explorer of schemas, tables and collections.
+- A grid where rows can be edited.
+- A query console.
+- A connection store. Paste a connection string to connect; passwords go to the IDE
+  password safe.
+
+The drivers are bundled: JDBC, the MongoDB Java driver and Jedis. SQLite runs inside the
+IDE. The toolkit's SQL Formatter & Linter, SQL Query Helper, Database Connection Strings and
+SQL → MongoDB Query tools sit in the same sidebar section.
+
+### Security scanners
+
+- **OSV Vulnerability Scanner**
+  - Finds known CVEs in npm, PyPI, Maven, Go, Cargo, RubyGems, NuGet and other
+    dependencies, including Maven and Gradle trees, using [OSV.dev](https://osv.dev).
+  - Adds CISA KEV and optional NVD data.
+  - Offers fixes: *Apply* is an undoable edit with a diff preview, and *Run in Terminal*
+    runs the fix command in your shell.
+- **SCA Scanner**: a dependency scan that is aware of Spring Boot. It reports CVEs, CISA
+  known-exploited vulnerabilities and deprecated packages, and suggests fixes that are safe
+  for the BOM.
+- **Workspace Security Audit**: finds secrets, injection risks and unsafe code in the
+  project.
+- **Cloud & Container Audit**: audits Terraform, Kubernetes, Docker and IAM configuration.
+- **Dependency & Config Check**: checks lockfiles, known advisories and CI hardening.
+- **Endpoint Security Scan**: checks a live endpoint's security headers, HSTS, CSP, CORS,
+  TLS and cookies.
+
+Right-click files or folders in the Project view and choose *Scan for Vulnerabilities* to
+scan only those. Maven and Gradle run only in trusted projects, and only after you allow it.
+
+### CSV & Excel viewer
+
+`.xlsx` and `.xlsm` files open in the spreadsheet viewer. `.csv`, `.tsv` and `.tab` files
+get a **Table** tab at the bottom of the editor.
+
+- Search, sort, see column statistics and export.
+- Edit cells with undo and redo, then Save or Save All.
+- Choose the delimiter and whether the first row is a header.
+
+### Code & productivity
+
+- **Snippets in code completion.**
+  - Type `ds-` for the framework snippets: Spring Boot, ASP.NET Core, FastAPI, Django,
+    Flask, React, Next.js, Express, Flutter, SwiftUI, pytest, xUnit, JUnit and loggers.
+  - Your own snippets appear in code completion too.
+  - Snippets expand as live templates, with tab stops, choices and variables.
+- **Saved Snippets / Create Snippet**: save the selection as a reusable snippet, then browse,
+  insert and manage your snippets.
+- **Remove Unused Imports**: finds imports that are never used and removes them.
+- **Dependencies & Installation**: checks and updates dependencies for npm, pnpm, Yarn, Bun,
+  pip, Poetry, uv, Maven, Gradle, NuGet and pub.
+- **Unused Dependencies**: lists npm, Python and Flutter packages that nothing uses, and gives
+  the command to remove them.
+- **README Viewer & Manager**: browse, preview, create and edit the project's README files.
+
+### Debug logs
+
+- **Insert Debug Log** adds a labelled log line for the variable at the caret, for example
+  `console.log("[app.js:2] total:", total);`. It works in JS/TS, Python, Java, Kotlin, C#,
+  Dart and Swift. The shortcut is Ctrl+Alt+Shift+L on macOS keymaps; you can assign one
+  in *Settings | Keymap*.
+- **Clean Debug Logs** lists the debug logs in the project and removes the ones you choose.
+  **Remove Debug Logs in This File** cleans the current file. Both can be undone.
+
+### Developer toolkit (100 tools)
+
+Each tool opens with a form, presets and examples. **Use Editor** reads the current
+selection, and the results update as you type. Outputs can be copied, inserted at the caret,
+opened, saved, or written into the project. Existing files are never overwritten without
+asking.
 
 | Section | Tools |
 |---|---|
-| Backend & API | REST API Client, cURL Converter, API Response Inspector, URL & Query String, CORS Builder & Debugger, OpenAPI / Swagger Toolkit, GraphQL Formatter & Types, API Resource Scaffolder |
-| Web & Frontend, Mobile, Text & Formatters, Encoders & Converters, Database (helpers), Testing & Debugging, Git, DevOps & Cloud, Security & Auth, AI & ML, Data & RAG | every toolkit tool of the section (100 tools in total) |
-| Security & Auth | OSV Vulnerability Scanner, SCA Scanner (see below) |
+| **Backend & API** | cURL Converter, API Response Inspector, URL & Query String Tool, CORS Builder & Debugger, OpenAPI / Swagger Toolkit, GraphQL Formatter & Types, API Resource Scaffolder |
+| **Web & Frontend** | React / Next.js Generator, HTML → JSX, CSS Units & Fluid Type, Color Converter & Palette, SEO & Social Meta Tags, Cache-Control Builder |
+| **Mobile Development** | adb & simctl Commands, Deep Links & Universal Links, App Permissions, Local API from Devices, Environments & Flavors, Signing & Keystores, SDK & Build Compatibility, Mobile CI Workflow, dp / px / pt & Asset Sizes |
+| **Text & Formatters** | JSON / YAML / XML Formatter, XML → JSON Converter, Diff Checker, Regex Tester & Library, Case Converter & Text Tools |
+| **Encoders & Converters** | Encode / Decode, Timestamp Converter, UUID & ID Generator, JSON to Types, Data Converter |
+| **Database** | SQL Formatter & Linter, SQL Query Helper, Database Connection Strings, SQL → MongoDB Query |
+| **Testing & Debugging** | Run & Debug Configurations, Build Error Explainer, Log Analyzer & Formatter, Mock Data Generator, JSON Schema Validator, Port & Network Toolkit |
+| **Git & Version Control** | Git Command Recipes, .gitignore Generator, Semver & App Versions |
+| **DevOps & Cloud** | Dockerfile, Docker Compose, docker run → Compose, CI Pipeline, .env Checker, Kubernetes & Helm, Cloud Deploy Workflow, Cron Expression Helper, Nginx Config, Health Check Endpoints, Terraform Starter, PM2 Ecosystem, Observability Starter |
+| **Security & Auth** | JWT Decoder & Signer, Hash, HMAC & Webhooks, OAuth 2.0 & PKCE, CSP & Security Headers, Cookie Inspector & Builder, Certificate & SSL Pinning |
+| **AI & ML** | Prompt Builder, LLM Models, Tokens & Cost, LLM Client Setup, LLM Output & JSON, LLM API Tester, JSON → TOON for Prompts, AI App Starter, AI/ML Code Snippets, GPU Memory & Speed, Model Serving Starter, Model Metrics, Dataset Split Planner, Learning-Rate Schedule, Model Card |
+| **Data & RAG** | Chunking Tester, RAG Pipeline Generator, Vector Store Setup, Embedding Model Guide, Retrieval Configuration, Context Window Budget, Grounded Prompt Assembler, Chunk & Index Size Calculator, Retrieval Evaluation, Answer Grounding Checker, Vector Similarity, Near-Duplicate Chunk Finder, Hybrid Search Fusion (RRF), Chunk Metadata Validator, Data Transformer, Data Profiler & Quality Check, JSON Lines Inspector, Schema Viewer & Diff, Partition & File Size Planner, Spark Cluster & Cost, Delta Lake Log Analyzer |
 
-### OSV Vulnerability Scanner and SCA Scanner
+The tools run the VS Code extension's own code, so they give exactly the same results.
+They run locally and do not call the network.
 
-Both open as editor tabs from the sidebar's *Security & Auth* section or
-*Find Action*, and are the extension's own pages **and** its own scanner code:
-the panels, the engine, dependency discovery, the Maven and Gradle resolvers
-and the SCA providers (`src/osv`, `src/sca`) are bundled into
-`scanner-runtime.js` and run in the page. What they ask VS Code, Node or
-`fetch` for is answered by the IDE (`ScannerHost.kt`):
+### Points, milestones and themes
 
-- **Files**: the project's files, files you pick ("Scan Files…"), and the
-  scanner's own storage (advisory cache, downloaded POMs, NVD/registry/KEV
-  caches in the IDE's system folder), temporary folders and the local Maven
-  repository. Nothing else is read or written.
-- **Network**: HTTPS only, through the IDE's HTTP proxy settings, off the
-  EDT and cancelled with the scan. What leaves the machine is the same as in
-  VS Code: package names and versions (OSV.dev, registries, Maven Central),
-  CVE ids (NVD), and the KEV catalog download.
-- **Build tools**: in a trusted project, and (by default) after you allow it
-  once per project, the extension's read-only `mvn dependency:tree` or
-  Gradle init-script listing runs from the project's wrapper or the tool on
-  PATH. The IDE refuses any other command or arguments.
-- **Fixes**: "Run in Terminal" (the command runs in your shell, in the
-  project folder, as a tab in the Run tool window) and "Apply" (an undoable edit
-  of the manifest, with a diff preview) only run after the modal
-  confirmation, as in VS Code.
-- **Settings**: *Settings | Tools | DevSnip Pro Scanners* holds the
-  extension's `devsnip.osvScanner.*` and `devsnip.sca.*` settings; the NVD
-  API key is kept in the IDE password safe and is only sent to NVD (the
-  page never sees it).
-- **Log**: "Show Log" opens the scan log ("DevSnip Pro: OSV Scanner") in an
-  editor tab.
+- **Points**: every tool run earns points. There is also a daily check-in and bonus,
+  streaks and streak freezes, and levels.
+- **Milestones and challenges**: milestones, daily quests, weekly events and a weekly recap,
+  lucky finds, a daily spin, the quiz and Bit Sprint.
+- **Rewards**: mystery boxes, cosmetics and theme unlocks. The **Milestones & Points** page
+  shows your progress.
+- **Premium features**: some advanced features of the REST client cost points, which are
+  refunded if the feature fails. **Points & Premium Features** lists them.
+- **Themes**: *System Default* follows your IDE theme, light or dark, and changes with it.
+  The 12 DevSnip themes are Dark, Midnight, Dracula, Monokai, Nord, Cyberpunk, Solarized,
+  Ember, Synthwave, Aurora, Light and High Contrast. They restyle every DevSnip page at once
+  and unlock with points. Choose one with **Choose Theme** or the sidebar's theme button.
 
-Differences from VS Code: a scan runs in its tab, so closing the tab stops it
-(the last result is kept for the project and shown when it reopens); the
-explorer's "Scan with OSV" entry is not ported; the pages' own wording
-(privacy notes) still says "VS Code", as the extension's text does.
+Points are kept locally in the IDE. There is no payment and no server.
 
-### Not ported yet (hidden from the sidebar until they are)
+## Where to find everything
 
-Host features that need IDE-side code: Workspace Security Audit, Endpoint Security Scan, Dependency &
-Config Check, Cloud & Container Audit, Database Client, CSV / Excel viewers,
-Saved / Framework Snippets, Insert / Clean Debug Logs, Remove Unused Imports,
-Dependencies & Installation, README Manager, OpenCode Integration, and
-Milestones & rewards (the sidebar's rank card is hidden; all DevSnip themes
-are available, and every REST client tool is open, without a points price).
-
-### Rebuilding the pages from the VS Code extension
-
-```bash
-cd webview && npm install && npm run build && npm test
-```
-
-`npm run build` exports the sidebar, tool and scanner pages, data, themes,
-codicons, the toolkit bundle and the scanner runtime from `../../DevSnip-Pro` (or `DEVSNIP_VSCODE_REPO`) into
-`src/main/resources/webview`; `npm test` runs the Node parity checks (toolkit,
-then `test/scanners.mjs`: both scanners as the IDE runs them vs. the
-extension's engine on Node, on a fixture project with fabricated advisories).
-Building the plugin itself does not need Node.
-
-## What the audit found
-
-The VS Code extension has **no DevSnip-owned backend server or hosted API**.
-Its "backend" for the API client is the in-process request engine in the
-extension host. The table maps each part to its Kotlin port:
-
-| VS Code source (TypeScript) | What it does | Kotlin port |
-|---|---|---|
-| `src/commands/api-test.ts`: `ApiRequest`, `buildRequestParts()` | Variable resolution, URL validation, query params, JSON/text/form/GraphQL bodies, Bearer/Basic/API key auth | `core/Models.kt`, `core/RequestBuilder.kt` |
-| `api-test.ts`: `makeRequest()` (axios) | Sending, timeouts, retries with exponential backoff, redirects, TLS verification, proxy, cookies, timing, size limit | `core/HttpEngine.kt` (`java.net.http`) |
-| `api-test.ts`: `decodeBody()`, `formatBytes()` | JSON, text and binary detection, 2 MB display limit | `core/ResponseDecoder.kt` |
-| `api-test.ts`: `describeRequestError()` | Turns network errors into a title, a hint and the field to fix | `core/RequestErrors.kt` (also maps JDK exceptions to the same error codes) |
-| `api-test.ts`: `generateCurlCommand()`, `parseCurlCommand()`, `shellQuote()` | cURL export and import | `core/Curl.kt` |
-| `api-test.ts`: `redactUrl()`, `historySnapshot()`, `exportHistory()` | History without secrets, JSON/CSV export | `core/Redaction.kt`, `core/History.kt` |
-| `api-test.ts`: environments in `globalState` | `{{variable}}` environments | `ide/ApiClientService.kt` (secret variables go to the IDE password safe) |
-| `services/dev-operations.ts`: `requestOAuthToken()` | OAuth 2.0 client credentials, password and refresh token grants | `core/OAuth.kt` |
-| `devsnip.apiTimeout` setting | Default request timeout | Settings tab, stored by `ApiClientService` |
-| Webview UI (`getWebviewContent()`, `api-client-webview.ts`) | Request builder and response viewer | The same page, exported by `webview/build.mjs`; its messages are answered by `ide/web/RestClientHost.kt`. `ide/ui/ApiClientPanel.kt` (Swing) without JCEF |
-| `api-client-features.ts` and `services/` (collections, assertions, AI, vector DB, security probe, ...) | The client's Software Developer and AI & ML tools | The same TypeScript, bundled for the page (`api-client-runtime.js`); its HTTP goes through `core/RawHttp.kt`, TLS probes through `core/TlsProbe.kt` |
-
-The only outbound service the extension calls is PostHog telemetry
-(`src/analytics/`). It is not an API feature and was **not** ported. Premium
-gating (`src/premium/`) is a local points balance tied to the milestone
-tracker, not a server, so it is also out of scope.
-
-The port follows the TypeScript closely so both clients behave the same:
-the same defaults (30 s timeout, retry on 429/502/503/504, 5 redirects), the
-same `User-Agent`, the same error texts and the same redaction rules. There
-is no second backend: each behaviour is implemented once, in `core/`, which
-has no IntelliJ dependency.
-
-## Backend & API toolkit
-
-These seven tools are ports of the VS Code extension's toolkit
-(`src/toolkits/`). They run locally and never call the network.
-
-| Tool | What it does | Ported from |
-|---|---|---|
-| cURL Converter | cURL (bash, cmd, browser "Copy as cURL") to fetch, Axios, Node, Python, Go, PHP, Java, Dart http/dio, Kotlin OkHttp, Swift, raw HTTP and HTTPie | `engines/web-curl.ts` |
-| API Response Inspector | Raw HTTP response or body: status meaning, pagination, rate limits, content-type problems, field list | `engines/data-inspect.ts` |
-| URL & Query String Tool | Parse URLs (leaked tokens, double encoding), build encoded URLs, query string to and from nested JSON | `engines/web-http.ts` |
-| CORS Builder & Debugger | Config for Express, NestJS, Next.js, Fastify, nginx and FastAPI; a browser-accurate header check; console error explainer | `engines/web-security.ts` |
-| OpenAPI / Swagger Toolkit | Lint endpoints, TypeScript types, a typed fetch client, cURL examples, a spec from sample JSON (YAML or JSON in) | `engines/web-apispec.ts` |
-| GraphQL Formatter & Types | Format and minify, operations and variables, request body, cURL and fetch, SDL to TypeScript | `engines/web-apispec.ts` |
-| API Resource Scaffolder | CRUD APIs for Express, NestJS, Next.js, Fastify (Prisma, Mongoose or memory), Spring Boot, ASP.NET Core and FastAPI | `engines/web-scaffold*.ts` |
-
-Each tab shows the tool's form (with its examples and **Use Editor** to read
-the current selection). Results can be copied, inserted at the caret, saved
-as a file, or, for scaffolds, saved into the project; existing files are
-never overwritten without asking.
-
-**Same results as VS Code.** The tools' fields, defaults and examples are
-exported from the extension's source (`scripts/export-backend-api.js`), and
-`BackendApiParityTest` runs every tool over 256 inputs recorded from the
-extension's own TypeScript. The test requires identical output: same code,
-same messages, same tables. The only allowance is the wording of JSON and
-YAML parser errors, which comes from V8 in VS Code and from the JVM here.
-
-## REST API Client
-
-The sidebar's **REST API Client** opens the VS Code extension's own client
-page (`getWebviewContent()` in `api-test.ts`) in an editor tab, so it looks
-and behaves as in VS Code: request tabs, saved requests and collections,
-history, environments, cookies, cURL import and export, the response viewer
-with search, and the Software Developer and AI & ML tools (code generation,
-JWT inspector, JSON tools, OAuth 2.0 helper, assertions, batch tests,
-response diff, request chaining, collections import/export, LLM requests,
-streaming, model comparison and benchmarks, embeddings, vector search, RAG,
-agent and prompt tests, WebSocket client, endpoint security scan, load test,
-SDK export, mock generator).
-
-How the page is served in the IDE:
-
-| Page message (VS Code: `apiTest()` message loop) | In the IDE |
+| Place | What is there |
 |---|---|
-| `testAPI`, `cancelRequest` | `RestClientHost` → `ApiClientService.send` (Kotlin `HttpEngine`) on a pooled thread with a cancellation token; a new Send replaces the request in flight, as in VS Code |
-| `generateCurl`, `parseCurl` | `core/Curl.kt` (with the active environment and stored cookies) |
-| `getHistory`, `clearHistory`, `exportHistory` | `ApiClientService` history (50 entries, redacted); export through an IDE save dialog |
-| `getEnvironments`, `saveEnvironment`, `deleteEnvironment`, `setActiveEnvironment` | `ApiClientService` environments; secret-named variables in the password safe |
-| `getCookies`, `clearCookies`, `saveResponse`, `getPoints` | The engine's cookie jar, an IDE save dialog, and 0 (no points in the IDE) |
-| `feature:oauthToken`, `feature:applyOauthToken` | `core/OAuth.kt`; the access token is kept in the password safe until applied |
-| every other `feature:*` message | The extension's own `handleFeatureMessage()` running in the page (`api-client-runtime.js`), with a FeatureContext served by the IDE: `sendHttp` → the engine (shared cookies; batch/load runs skip history), storage → IDE state, HTTP made by the services (axios) → `core/RawHttp.kt` (streamed for LLM streaming), TLS probes → `core/TlsProbe.kt`, dialogs and files → IDE dialogs |
+| **DevSnip Pro** tool window | The Tools sidebar |
+| *Find Action* / *Search Everywhere* | Every command, as `DevSnip Pro: …` |
+| *Tools \| DevSnip Pro* | Show Tools Sidebar and every command |
+| Editor right-click → *DevSnip Pro* | Create Snippet, Insert Debug Log, Remove Debug Logs in This File, Clean Debug Logs, Remove Unused Imports, and the tools that work on the selection (JSON Formatter, JWT Decoder, cURL Converter, HTML → JSX, Build Error Explainer and more) |
+| Project view right-click | *Scan for Vulnerabilities* (OSV) and *Open in CSV & Excel Viewer* |
+| Spreadsheet editor title bar | *Open in CSV & Excel Viewer* |
+| Code completion | Framework snippets (`ds-`) and your own snippets |
 
-The page and its runtime talk to the IDE through `webview/src/bridge.js`
-(`acquireVsCodeApi()`, plus RPCs for the runtime). The shims that make the
-extension's services run in the page are in `webview/shims/` (`axios.js`,
-`tls.js`, `https.js`, `url.js`, `vscode-rest.js`, `milestone-tracker.js`).
-The page can only write or read files the user picked in that page's own
-IDE dialog.
+## Settings
 
-### Native client (without JCEF)
+All settings are optional.
 
-The same engine behind a Swing UI, for IDEs without the embedded browser:
+- *Settings | Tools | DevSnip Pro* holds the general settings:
+  - REST timeout
+  - confirmation before cleaning debug logs
+  - security scan limits
+  - progress notifications
+  - **Share anonymous usage statistics**, which is off by default
+- *Settings | Tools | DevSnip Pro | DevSnip Pro Scanners* holds the OSV and SCA settings:
+  - Maven/Gradle resolution, POM downloads, health checks, and KEV and NVD lookups
+  - an optional NVD API key, which is kept in the password safe
+- **REST API Client → Settings tab**: timeout, retries, redirects, SSL verification and an
+  HTTP proxy. When the proxy is left blank, the IDE's proxy settings are used.
 
+## Privacy and security
 
-- **Requests:** any method, query params and headers tables (rows can be
-  disabled), JSON, text, form URL-encoded and GraphQL (query, variables,
-  operation name) bodies, and a Format JSON button.
-- **Auth:** Bearer token, Basic (an empty password works, as for Stripe), API key
-  in a header or the query string, and OAuth 2.0 (client credentials,
-  password or refresh token grant, with client credentials in the body or
-  as HTTP Basic).
-- **Environments:** `{{name}}` variables in the URL, params, headers, body,
-  auth and OAuth fields. An undefined variable is named in the error.
-- **Responses:** status (coloured), time, size, retry and redirect counts,
-  formatted JSON body, a headers table, and a Diagnostics tab. Binary bodies are described,
-  not dumped, and gzip/deflate bodies are decoded.
-- **Errors:** DNS, refused connections, timeouts, certificate and TLS problems,
-  redirect loops, resets and proxy errors each get a plain explanation and a
-  **Fix in…** button that opens the right tab or field.
-- **Settings:** timeout (saved as the default), retries, retry delay and
-  status codes, redirect following and limit, SSL verification, and an HTTP proxy
-  (left blank, the IDE proxy settings are used).
-- **Tools:** Import cURL, Copy as cURL (with stored cookies), and history
-  (the last 50 requests): open an entry, clear, export as JSON or CSV, clear cookies.
-- **Responsiveness:** requests run on a background task with a progress
-  indicator. **Send** turns into **Cancel**, and the status-bar progress can also
-  cancel. Cancelling also stops retry backoff.
+- **Local first.** Nothing leaves the machine except the requests you send yourself, plus
+  these:
+  - the scanners' lookups: package names and versions to OSV.dev, package registries and
+    Maven Central, and CVE ids to NVD
+  - the endpoint scan of the URL you enter
+  - anonymous usage statistics, only if you turn them on
+- **Password safe.** Database passwords, secret-looking environment variables (`token`,
+  `secret`, `password`, `key`, `auth`, `cookie`, `session`, …), OAuth tokens and the NVD key
+  are stored in the IDE password safe. That is the macOS Keychain, Windows Credential
+  Manager, KeePass or libsecret. The settings files hold only blank placeholders.
+- **History without secrets.** Credential-like query values are redacted
+  (`api_key=[redacted]`), and typed tokens are never saved. Exports leave out request
+  bodies, and CSV exports are protected against formula injection.
+- **Redirects.** `Authorization`, `Cookie` and `Proxy-Authorization` are dropped when a
+  redirect goes to another host.
+- **Files and processes.**
+  - Files: the plugin's pages read and write only the project, the plugin's own storage and
+    files you pick.
+  - Processes: only package managers, build tools and Node, and only in trusted projects.
+  - Terminal commands from the scanners run only after you confirm them.
+- **Logs.** The logs contain only method, redacted URL, status and timing; no headers,
+  bodies or credentials.
 
-## Security
+## Requirements and compatibility
 
-- **No secrets in code or config.** Nothing is hardcoded. Tests use only
-  local mock servers and throwaway values.
-- **Password safe.** Environment variables whose names contain `token`,
-  `secret`, `password`, `passwd`, `pwd`, `key`, `auth`, `cookie`, `session`,
-  `signature` or `credential` are stored with `PasswordSafe` (macOS Keychain,
-  Windows Credential Manager, KeePass or libsecret). The XML state
-  (`devsnip-api-client.xml`, not roamed) holds only blank placeholders for them.
-  OAuth access tokens are stored the same way, and the UI shows only a masked
-  preview (`eyJhbG...7890 (52 chars)`).
-- **Typed credentials stay in memory.** Tokens and passwords typed into the
-  Auth tab are never persisted. History keeps a header or auth field only
-  when it is a `{{variable}}` reference, and redacts credential-like query values
-  (`api_key=[redacted]`).
-- **Exports.** History exports leave out request bodies and snapshots. CSV
-  cells starting with `= + - @` are escaped to prevent formula injection.
-- **Logs.** Only debug-level lines with the method, redacted URL, status
-  and timing. No headers, bodies or credentials. `toString()` of the request, auth
-  and OAuth types masks secrets.
-- **Redirects.** `Authorization`, `Cookie` and `Proxy-Authorization` are
-  dropped when a redirect goes to another host.
-- **Cookies.** Kept in memory for the IDE session only (the VS Code client
-  persisted them). The client page's cookie viewer shows `name=value` pairs,
-  as in VS Code; the native client shows only names.
-- **The client page.** It reaches the network only through the IDE (its CSP
-  allows no `fetch`; WebSockets are allowed for the WebSocket tool, as in
-  VS Code). Requests run off the UI thread and are cancelled when the tab is
-  closed. Files are written or read only where the user chose in the page's
-  own dialog. The OAuth helper's access token stays in the password safe
-  until **Apply token to request**.
-- **Copy as cURL.** The copied command includes the request's credentials,
-  as in VS Code, and the UI says so.
+- Any IntelliJ-based IDE **2024.1 or newer**, including 2026.2 and later, where the
+  embedded browser runs out of process. The plugin depends only on
+  `com.intellij.modules.platform`.
+- The pages use the IDE's embedded browser (JCEF), which every standard JetBrains IDE
+  includes. Without it, the tool window falls back to a native REST API Client and the seven
+  Backend & API tools.
+- The plugin is dynamic: it can be installed, updated and removed without a restart.
+- The Plugin Verifier finds it compatible with IntelliJ IDEA 2024.1.7, 2026.2.3 and the
+  2026.3 EAP, with no deprecated, experimental or internal API usages.
 
-## Requirements
+## Known limitations
 
-- JDK 17 or newer to run Gradle. No IDE install is needed: Gradle downloads
-  IntelliJ IDEA Community 2024.1.7 for compiling (about 1 GB the first time).
-- Network access on the first build (Gradle, Maven Central, JetBrains repositories).
-- **No environment variables are required** to build, test or use it (only to sign and publish, see below). The plugin needs no API keys,
-  accounts or backend URLs. You supply target URLs and credentials in the
-  tool window or in environments.
+- **Insert Debug Log shortcut**: it has no default shortcut on the Windows and Linux keymaps,
+  where Ctrl+Alt+Shift+L is Reformat File.
+- **Unsaved spreadsheet edits**: they are not kept across an IDE restart. The viewer asks
+  you to save when you close it.
+- **PostgreSQL client certificates**: the key must be PKCS#8 (`BEGIN PRIVATE KEY`).
+- **SQL Server**: only SQL Server logins work, as in VS Code.
+- **Request bodies**: they are text only, with no multipart or file uploads. The explicit
+  proxy is HTTP only, without proxy authentication.
+- **Response size**: responses over 100 MB are refused, to protect the IDE's memory.
+- **Cookies**: they are simple per-host `name=value` pairs and last for the IDE session.
+- **Shared state**: history and environments are shared by all projects.
+- **OpenCode**: the VS Code extension's OpenCode Integration is not included.
 
-## Build, test and run
+The full feature-by-feature map, with every platform difference, is in
+[docs/MIGRATION.md](docs/MIGRATION.md).
+
+## Development
+
+### How it works
+
+The VS Code extension is the single source of truth, and it is not modified:
+
+- **Pages.** Its pages (HTML, CSS and JavaScript) are shown in the IDE's embedded browser,
+  with IntelliJ colours mapped onto the `--vscode-*` variables they use.
+- **Extension code.** The extension's own code runs in an *extension host*: a hidden
+  browser page, one per project, running on a VS Code API stand-in
+  (`webview/shims/vscode-host.js`).
+- **IDE side.** The IDE provides what VS Code would: files, editors, dialogs, terminals,
+  processes, HTTP, database drivers and the password safe. This code is in
+  `src/main/kotlin/pro/devsnip/api/ide/engine/`.
+- **REST and Backend & API engines.** The REST client's HTTP engine and the seven Backend &
+  API tools are Kotlin ports in `core/`, which has no IntelliJ dependency.
+
+### Build and run
+
+You need JDK 17 or newer. Gradle downloads IntelliJ IDEA Community 2024.1.7 to compile
+against, about 1 GB on the first build. No environment variables are needed.
 
 ```bash
 ./gradlew test
@@ -298,78 +328,72 @@ The same engine behind a Swing UI, for IDEs without the embedded browser:
 ./gradlew buildPlugin
 ```
 
-The plugin ZIP is written to `build/distributions/devsnip-pro-jetbrains-0.1.2.zip`.
+The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.0.0.zip`.
 
 ```bash
 ./gradlew runIde
 ```
 
-This starts a sandbox IntelliJ IDEA with the plugin. Open **View | Tool Windows | DevSnip Pro**.
+This starts a sandbox IDE with the plugin.
+
+### Rebuilding the pages from the VS Code extension
+
+This needs Node 18 or newer, with the extension's source in `../DevSnip-Pro` (or set
+`DEVSNIP_VSCODE_REPO`):
 
 ```bash
-./gradlew verifyPlugin
+cd webview && npm install && npm run build && npm test
 ```
 
-This runs JetBrains Plugin Verifier against IDEA 2024.1.7 and 2026.2.3. It downloads both IDEs.
+`npm run build` writes the pages and bundles into `src/main/resources/webview`. Building
+the plugin does not need Node. `webview/wording.mjs` rewords the extension's text that names
+VS Code's UI, such as "Command Palette" → "Find Action".
 
-To install into your own IDE: **Settings | Plugins | ⚙ | Install Plugin from
-Disk…**, choose the ZIP, then restart.
+### Tests
 
-Compatibility: built against platform 241 (2024.1) with Java 17 bytecode,
-`since-build` 241, no `until-build`. It depends only on
-`com.intellij.modules.platform`, so it loads in every IntelliJ-based IDE.
+| Command | What it covers |
+|---|---|
+| `./gradlew test` | 144 unit, integration and headless-IDE tests: REST engine, cURL, OAuth, history and redaction, toolkit parity (256 recorded results), scanners' IDE side, REST client page protocol, extension host, database drivers (embedded PostgreSQL, and MongoDB when `mongod` is installed) |
+| `cd webview && npm test` | Every toolkit tool against the extension's TypeScript on Node (249 cases and 50 crypto cross-checks), both scanners, 50 REST client feature messages, the extension host's commands and pages, and SQLite |
+| `scripts/db-containers.sh start`, then `./gradlew writeTestClasspath && (cd webview && npm run test:db)` | The Database Client against MySQL, MariaDB, SQL Server, Oracle, ClickHouse and Redis in Docker, compared with the extension's own Node drivers. Run `scripts/db-containers.sh stop` afterwards |
+| `DEVSNIP_SELFTEST=/path/to/project ./gradlew runIde` | A self-check in a real IDE: the main pages, the sidebar, the CSV viewer and Insert Debug Log. It writes `DEVSNIP-SELFTEST` lines to the sandbox `idea.log` |
+| `scripts/smoke-test-zip.sh <IDE Contents folder> <project>` | The same self-check with the release ZIP installed into a fresh IDE configuration. The project needs a `README.md`, a `data.csv` and a `src/app.js` |
+| `./gradlew verifyPlugin` | Plugin Verifier against IDEA 2024.1.7, 2026.2.3 and the 2026.3 EAP |
 
-## Publishing to JetBrains Marketplace
+All automated tests use local servers on `127.0.0.1`. No production or third-party API is
+contacted.
 
-Verified for this release (0.1.2):
+## Publishing
 
-- **Tests:** 129 unit, integration and headless-IDE tests pass (`./gradlew test`), and the webview
-  parity suites pass (`cd webview && npm test`: 249 toolkit cases, 50 crypto cross-checks, 4 scanner suites,
-  50 REST client feature messages).
-- **Plugin Verifier:** Compatible with IntelliJ IDEA 2024.1.7 (IC-241.19416.15), 2026.2.3 (IU-262.10968.63)
-  and the 2026.3 EAP (IU-263.7307.44), with no deprecated, scheduled-for-removal, experimental or internal
-  API usages. Two checks differ by IDE version:
-  - Workspace trust: the public `TrustedProjects.isProjectTrusted(Project)` where the IDE has it, otherwise
-    (2024.x) the older `Project.isTrusted()`, found at run time. If neither is found, the scanners treat the
-    project as untrusted and use their built-in resolver instead of running Maven or Gradle.
-  - "Run in Terminal": the platform's execution API (`RunContentExecutor`), the same on every supported
-    IDE, so the Terminal plugin is not needed.
-- **Structure:** `verifyPluginStructure` passes. The listing assets are `pluginIcon.svg` (and `_dark`),
-  change notes, description and `LICENSE` (MIT).
-- **Dynamic plugin:** the platform's own check (`DynamicPlugins.checkCanUnloadWithoutRestart`) allows
-  installing, updating and unloading without a restart; generated actions are removed and re-added.
+The 1.0.0 release checklist, with its test results, is in
+[docs/RELEASE-1.0.0.md](docs/RELEASE-1.0.0.md).
 
-### 1. Signing key (one time)
+1. **Signing key (one time).** Create a certificate as described in
+   [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html), and
+   keep it outside the repository.
+2. **First release.** JetBrains requires the first version to be uploaded on the website:
 
-Create a certificate following [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html).
-Keep the key outside the repository.
+   ```bash
+   export CERTIFICATE_CHAIN="$(cat /secure/path/chain.crt)"
+   export PRIVATE_KEY="$(cat /secure/path/private.pem)"
+   export PRIVATE_KEY_PASSWORD='...'
+   ./gradlew signPlugin
+   ```
 
-### 2. First release (manual upload)
+   Upload `build/distributions/devsnip-pro-jetbrains-1.0.0-signed.zip` at
+   [plugins.jetbrains.com](https://plugins.jetbrains.com) (your profile → **Add new
+   plugin**), with the MIT licence and the source URL. JetBrains reviews new plugins
+   before listing them.
+3. **Later releases.** Bump `pluginVersion` in `gradle.properties`, then update
+   `CHANGELOG.md` and the `changeNotes` in `build.gradle.kts`. Then publish with a
+   Marketplace token:
 
-JetBrains requires the first version of a plugin to be uploaded through the website.
+   ```bash
+   export PUBLISH_TOKEN='perm:...'
+   ./gradlew publishPlugin
+   ```
 
-```bash
-export CERTIFICATE_CHAIN="$(cat /secure/path/chain.crt)"
-export PRIVATE_KEY="$(cat /secure/path/private.pem)"
-export PRIVATE_KEY_PASSWORD='...'
-./gradlew signPlugin
-```
-
-Upload `build/distributions/devsnip-pro-jetbrains-0.1.2-signed.zip` at
-[plugins.jetbrains.com](https://plugins.jetbrains.com) → your profile → **Add new plugin**.
-Choose the MIT license and add the source URL. JetBrains reviews new plugins before they are listed, which usually takes a few working days.
-
-### 3. Later releases
-
-Bump `pluginVersion` in `gradle.properties`, add an entry to `CHANGELOG.md` and the `changeNotes` in
-`build.gradle.kts`, create a token under **My Tokens** on the Marketplace, and run:
-
-```bash
-export PUBLISH_TOKEN='perm:...'
-./gradlew publishPlugin
-```
-
-`publishPlugin` signs, verifies and uploads the plugin. Set `PUBLISH_CHANNEL=eap` to publish to a pre-release channel.
+   Set `PUBLISH_CHANNEL=eap` to publish to a pre-release channel.
 
 | Variable | Used by | Purpose |
 |---|---|---|
@@ -381,98 +405,36 @@ export PUBLISH_TOKEN='perm:...'
 
 None of these are needed to build, test or run the plugin.
 
-## Testing locally
-
-All automated tests run against local servers on `127.0.0.1` with ephemeral
-ports (`com.sun.net.httpserver`), so no production or third-party API is
-contacted. The one exception is a DNS lookup of the reserved
-`devsnip-test.invalid` name.
-
-| Suite | Covers |
-|---|---|
-| `RequestBuilderTest` | URL validation, variables, query merging and encoding, header case, each auth style, JSON/text/form/GraphQL bodies, body-carrying methods, secret-free `toString()` |
-| `CurlTest` | Export, quoting checked against a real `/bin/sh` (injection attempts), import of common flags, round trip, errors |
-| `ResponseDecoderTest`, `RequestErrorsTest` | JSON/text/binary/charset detection, truncation, gzip, sizes, every error description, JDK exception mapping |
-| `HistoryAndRedactionTest` | URL redaction, snapshots without secrets, 50-entry cap, storage round trip, JSON/CSV export |
-| `HttpEngineIntegrationTest` | Real HTTP: status, headers, timing, size, retries, 303/307 redirects, redirect loops, cross-host credential stripping, cookies, gzip, restricted headers, timeout, refused connection, unknown host, cancellation (in flight and during backoff), GraphQL, HEAD/DELETE |
-| `HttpsVerificationTest` | A self-signed HTTPS server fails with "SSL certificate problem" and works with verification off |
-| `OAuthClientTest` | Each grant's form, Basic client auth, token masking, endpoint errors, input validation |
-| `ApiClientServiceTest` | Secret variables kept out of persisted state, state reload, history without secrets, failures recorded, OAuth token storage |
-| `ApiClientPanelTest` | The real tool window in a headless IDE: Send, Cancel, error diagnosis and Fix button, Copy as cURL, opening history |
-| `BackendApiParityTest` | All seven toolkit tools against 256 results recorded from the VS Code extension (defaults, every mode and example, edge cases, errors) |
-| `ToolPanelTest` | The generic tool panel in a headless IDE: every tool runs its defaults, form input, conditional fields, errors, generated files |
-| `WebviewAssetsTest` | The sidebar, all 100 tool pages and their theme variables as the IDE assembles them (copied to `build/webview-preview`) |
-| `ScannerHostTest` | The scanners' IDE side: globs, path rules, temporary folders, file search, HTTPS-only fetch, aborts, the NVD key, allowed Maven/Gradle runs, confirmations, settings |
-| `RestClientHostTest` | The client page's message protocol on the real engine: `testAPI` responses, errors and cancellation, environments (secrets, rename, delete, active index), cookies, history and export, cURL, saving responses, OAuth, the feature system's sender, raw HTTP (statuses, streaming, error codes, self-signed TLS), TLS probe, file and storage guards, wire formats |
-| `IdeIntegrationTest` | One page file per browser, complete script folder, the editor "Use Editor" reads, Find Action entries removed and re-added around a dynamic unload, and the platform's own dynamic-unload check |
-
-The webview side has its own checks (Node 18 or newer, and the VS Code
-extension's source next to this repository):
-
-```bash
-cd webview && npm install && npm test
-```
-
-They run all 100 toolkit tools from the bundled page code against the
-extension's TypeScript on Node (249 cases, plus 50 key/certificate
-cross-checks), both scanners as the IDE runs them against the
-extension's engine, and 50 of the REST client's in-page feature messages
-against the extension's handlers (`test/rest-client.mjs`).
-
-To try it by hand against a local server:
-
-```bash
-python3 -m http.server 8000
-```
-
-Then send `GET http://127.0.0.1:8000/` from the tool window. For JSON
-APIs, any local dev server works, or create an environment with
-`baseUrl = http://localhost:3000` and send `{{baseUrl}}/your/endpoint`.
-
-## Known limitations
-
-- The REST client's points (Milestones & rewards) are not ported: every
-  tool of the client is available and nothing is charged; the points badge
-  and prices are hidden.
-- The client page's proxy setting has no proxy authentication (the engine's
-  explicit proxy is HTTP only). The native client (without JCEF) does not
-  have the page's collections and tools.
-- Toolkit code outputs are shown as plain monospace text, without syntax highlighting.
-- No multipart/form-data or file-upload bodies. Bodies are text.
-- Response bodies over 100 MB (received or after gzip/deflate decoding) are
-  refused with "The response is too large" instead of being loaded into the
-  IDE's memory. VS Code has no limit, because its client runs in a separate
-  process; here a huge body would exhaust the IDE's own heap.
-- The JDK HTTP client manages the `Host`, `Connection`, `Content-Length`, `Expect`
-  and `Upgrade` headers itself. If you type them, they are skipped with a warning.
-- The explicit proxy is HTTP only, without proxy authentication. With no explicit
-  proxy, the IDE proxy settings are used.
-- Cookies are simple per-host `name=value` pairs, ignoring path, expiry and
-  domain attributes (as in the VS Code client), and last only for the IDE session.
-- The response viewer is a plain monospace text area, without syntax
-  highlighting or search.
-- The timeout covers a whole attempt, redirects included. Each retry gets a new timeout.
-- History and environments are application-wide, not per project.
-
 ## Project layout
 
 ```
-src/main/kotlin/pro/devsnip/api/core/   Engine (no IntelliJ dependency): models, builder, HTTP, OAuth, cURL, errors, history
-src/main/kotlin/pro/devsnip/api/core/toolkit/  Backend & API toolkit: framework, JS/YAML compatibility, engines, tools
-src/main/resources/toolkit/             Tool metadata exported from the VS Code extension
-scripts/export-backend-api.js           Re-exports metadata and reference results from the VS Code source
-src/main/kotlin/pro/devsnip/api/ide/    Service (state, password safe) and the native REST client UI
-src/main/kotlin/pro/devsnip/api/ide/web/  The embedded-browser pages: sidebar, tool, REST client and scanner tabs, their IDE hosts, themes, settings
-src/main/resources/webview/             The VS Code extension's pages and bundled code (built by webview/build.mjs)
-webview/                                Build and parity tests for the pages (Node; not needed to build the plugin)
-src/main/resources/META-INF/plugin.xml  Plugin descriptor
-src/test/kotlin/                        Unit, integration and headless IDE tests
+src/main/kotlin/pro/devsnip/api/core/          REST engine (no IntelliJ dependency): models, HTTP, OAuth, cURL, errors, history
+src/main/kotlin/pro/devsnip/api/core/toolkit/  The seven Backend & API tools in Kotlin (native fallback)
+src/main/kotlin/pro/devsnip/api/ide/           REST client service (state, password safe) and native UI
+src/main/kotlin/pro/devsnip/api/ide/web/       Sidebar, tool, REST client and scanner tabs, themes, settings
+src/main/kotlin/pro/devsnip/api/ide/engine/    Extension host: engine, VS Code API host, panels, editors, terminals, database drivers, actions, snippets
+src/main/resources/webview/                    The extension's pages and bundled code (built by webview/build.mjs)
+src/main/resources/META-INF/plugin.xml         Plugin descriptor
+webview/                                       Page build, VS Code / Node shims and parity tests (Node; not needed to build the plugin)
+scripts/                                       Database containers, release ZIP smoke test, toolkit metadata export
+docs/                                          Migration map and release notes
+src/test/kotlin/                               Unit, integration and headless-IDE tests
 ```
 
 ## Third-party components
 
-Bundled in the plugin: Gson (Apache-2.0), SnakeYAML (Apache-2.0); in the
-webview resources: VS Code Codicons (font CC BY 4.0, code MIT), node-forge
-(BSD-3-Clause), @noble/hashes and @noble/curves (MIT), buffer (MIT),
-path-browserify (MIT), yaml (ISC). Licence notices of bundled JavaScript are
-kept at the end of `toolkit-runtime.js` and `api-client-runtime.js`.
+- **Bundled in the plugin:** Gson (Apache-2.0), SnakeYAML (Apache-2.0), PostgreSQL JDBC
+  (BSD-2-Clause), MariaDB Connector/J (LGPL-2.1), Microsoft JDBC Driver for SQL Server
+  (MIT), Oracle JDBC ojdbc11 (Oracle Free Use Terms and Conditions), MongoDB Java driver
+  (Apache-2.0), Jedis (MIT) with Apache Commons Pool (Apache-2.0), and org.json (Public
+  Domain).
+- **In the extension host:** sql.js (MIT), pako (MIT/Zlib) and bson (Apache-2.0).
+- **In the pages:** VS Code Codicons (font CC BY 4.0, code MIT), node-forge (BSD-3-Clause),
+  @noble/hashes and @noble/curves (MIT), buffer (MIT), path-browserify (MIT) and yaml (ISC).
+
+The licence notices of the bundled JavaScript are kept at the end of `toolkit-runtime.js`
+and `api-client-runtime.js`.
+
+## Licence
+
+[MIT](LICENSE)

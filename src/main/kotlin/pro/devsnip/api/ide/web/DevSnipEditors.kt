@@ -48,6 +48,9 @@ class DevSnipVirtualFile(val kind: Kind, val toolId: String, title: String) : Li
     /** Field values to start with (from "Run on selection" or an alias). */
     var initial: JsonObject = JsonObject()
 
+    /** What a scanner tab scans when it opens. */
+    var scan: ScanRequest = ScanRequest(false, emptyList())
+
     init {
         isWritable = false
     }
@@ -72,11 +75,22 @@ object DevSnipPages {
         OpenFileDescriptor(project, file).navigate(true)
     }
 
-    /** Opens (or focuses) the OSV ("osv") or SCA ("sca") scanner. */
-    fun openScanner(project: Project, page: String) {
+    /**
+     * Opens (or focuses) the OSV ("osv") or SCA ("sca") scanner. [run] scans
+     * the workspace straight away; [files] scans those dependency files or
+     * folders (osvScanFile), as the extension's commands do.
+     */
+    fun openScanner(project: Project, page: String, run: Boolean = false, files: List<java.nio.file.Path> = emptyList()) {
         val manager = FileEditorManager.getInstance(project)
         val existing = manager.openFiles.filterIsInstance<DevSnipVirtualFile>().firstOrNull { it.kind == DevSnipVirtualFile.Kind.SCANNER && it.toolId == page }
-        OpenFileDescriptor(project, existing ?: DevSnipVirtualFile(DevSnipVirtualFile.Kind.SCANNER, page, WebviewAssets.scannerTitle(page))).navigate(true)
+        if (existing != null) {
+            OpenFileDescriptor(project, existing).navigate(true)
+            if (run || files.isNotEmpty()) manager.getEditors(existing).filterIsInstance<ScannerPageEditor>().firstOrNull()?.scan(run, files)
+            return
+        }
+        val file = DevSnipVirtualFile(DevSnipVirtualFile.Kind.SCANNER, page, WebviewAssets.scannerTitle(page))
+        file.scan = ScanRequest(run, files)
+        OpenFileDescriptor(project, file).navigate(true)
     }
 
     fun openRestClient(project: Project) {
@@ -164,6 +178,9 @@ class ToolPageEditor(private val project: Project, private val file: DevSnipVirt
     }
 }
 
+/** A scan to start with: the whole workspace ([run]) or the given files and folders. */
+data class ScanRequest(val run: Boolean, val files: List<java.nio.file.Path>)
+
 /** The OSV or SCA scanner: the extension's own page and panel code, with the IDE doing its I/O. */
 class ScannerPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEditorBase(file, WebviewAssets.scannerTitle(file.toolId)) {
     private val browser: DevSnipBrowser = DevSnipBrowser(this, "panel") { message -> host.handle(message) }
@@ -171,8 +188,11 @@ class ScannerPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnipEdi
 
     init {
         Disposer.register(this, host)
-        browser.load(WebviewAssets.scannerHtml(file.toolId, DevSnipUiState.getInstance(), host.hostInfo(), browser.queryFunction, browser.instance))
+        browser.load(WebviewAssets.scannerHtml(file.toolId, DevSnipUiState.getInstance(), host.hostInfo(file.scan), browser.queryFunction, browser.instance))
     }
+
+    /** Scans again in the open tab (the extension's command on an open panel). */
+    fun scan(run: Boolean, files: List<java.nio.file.Path>) = browser.post(host.scanMessage(ScanRequest(run, files)))
 
     // The extension tells a hidden panel's result with a notification instead.
     override fun selectNotify() = host.setVisible(true)
@@ -192,12 +212,14 @@ class RestClientPageEditor(project: Project, file: DevSnipVirtualFile) : DevSnip
         // Replies come from pooled threads; the browser is driven from the UI thread.
         post = { message -> ApplicationManager.getApplication().invokeLater { browser.post(message) } },
         background = { task -> ApplicationManager.getApplication().executeOnPooledThread(task) },
+        points = pro.devsnip.api.ide.engine.EnginePoints.ledger(project),
     )
 
     init {
         val state = DevSnipUiState.getInstance()
         val hostInfo = JsonObject().apply {
             addProperty("page", "rest-client")
+            addProperty("points", pro.devsnip.api.ide.engine.DevSnipNative.points)
             add("storage", state.toolStorage())
             addProperty("platform", if (SystemInfo.isMac) "darwin" else if (SystemInfo.isWindows) "win32" else "linux")
         }
