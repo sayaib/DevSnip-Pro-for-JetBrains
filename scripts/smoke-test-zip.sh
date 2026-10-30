@@ -27,19 +27,9 @@ root=$(cd "$(dirname "$info")/.." && pwd)
 [ -d "$root/lib" ] || root=$(dirname "$info")
 java="$root/jbr/Contents/Home/bin/java"
 [ -x "$java" ] || java="$root/jbr/bin/java"
-mapfile_args=$(python3 - "$info" "$root" "-Didea.properties.file=$work/idea.properties" -Ddevsnip.selfTest=exit -Didea.trust.all.projects=true \
+mapfile_args=$(python3 "$(dirname "$0")/ide-launch-args.py" "$info" "$root" "-Didea.properties.file=$work/idea.properties" -Ddevsnip.selfTest=exit -Didea.trust.all.projects=true \
   -Djb.consents.confirmation.enabled=false "-Djb.privacy.policy.text=<!--999.999-->" -Didea.initially.ask.config=never \
-  -Dide.experimental.ui.onboarding=false <<'PY'
-import json, sys, shlex
-info, root, extra = sys.argv[1], sys.argv[2], sys.argv[3:]
-d = json.load(open(info))
-launch = next(l for l in d["launch"] if l["os"].lower() in ("macos", "linux", "windows"))
-cp = ":".join(f"{root}/lib/{j}" for j in launch["bootClassPathJarNames"])
-args = [a.replace("$APP_PACKAGE/Contents", root).replace("$APP_PACKAGE", root).replace("$IDE_HOME", root) for a in launch.get("additionalJvmArguments", [])]
-vm = [l.strip() for l in open(f"{root}/bin/{launch['vmOptionsFilePath'].split('/')[-1]}") if l.strip() and not l.startswith("#")]
-print(" ".join(shlex.quote(x) for x in vm + args + extra + ["-cp", cp, launch.get("mainClass") or d.get("mainClass")]))
-PY
-)
+  -Dide.experimental.ui.onboarding=false)
 echo "IDE: $ide"
 echo "ZIP: $zip"
 eval "exec \"$java\" $mapfile_args \"$project\"" >"$work/stdout.log" 2>&1 &

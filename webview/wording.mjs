@@ -1,7 +1,7 @@
 /*
  * The extension's user-facing text that names VS Code's own UI, said the
- * JetBrains way. Exact phrases only, so nothing else in the code changes;
- * build.mjs applies them to the bundles, the pages' scripts and the
+ * JetBrains way, plus one check that assumes VS Code (last entry). Exact
+ * phrases only, so nothing else in the code changes; build.mjs applies them to the bundles, the pages' scripts and the
  * extension files. A phrase that no longer exists in the extension is
  * reported by the build, so the list stays current.
  */
@@ -37,7 +37,10 @@ export const WORDING = [
   ["file in the Explorer and choose ", "file in the Project view and choose "],
   ["For CSV files use \", h(\"b\", null, \"Open With…\"), \" or the table button in the editor title bar.", "For CSV files use the \", h(\"b\", null, \"Table\"), \" tab at the bottom of the editor."],
   ["The **DevSnip Pro** icon in the Activity Bar opens the Tools sidebar.", "The **DevSnip Pro** tool window holds the Tools sidebar."],
-  ["You can also run any tool from the Command Palette: type `DevSnip Pro`.", "You can also run any tool from Find Action (Ctrl+Shift+A, or Cmd+Shift+A on macOS): type `DevSnip Pro`."]
+  ["You can also run any tool from the Command Palette: type `DevSnip Pro`.", "You can also run any tool from Find Action (Ctrl+Shift+A, or Cmd+Shift+A on macOS): type `DevSnip Pro`."],
+  // Not text: the extension takes a host without Node for VS Code for the web and hides desktop tools.
+  // A page has no Node, but the IDE is a desktop host (environment.ts and layout.ts each make this check).
+  ["typeof process === \"undefined\" || !process.versions?.node", "false"]
 ];
 
 /** Applies the phrases that belong to `file` (all of them when a phrase names no file); records which were used. */

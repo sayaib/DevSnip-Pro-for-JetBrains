@@ -181,7 +181,7 @@ function openPage(page) {
   const globalStorage = fs.mkdtempSync(path.join(storage, `${page}-`));
   const sandbox = {
     console, setTimeout, clearTimeout, setInterval, clearInterval, queueMicrotask, TextEncoder, TextDecoder, URL, URLSearchParams,
-    AbortController, AbortSignal, DOMException, Event, EventTarget, structuredClone, atob, btoa, Intl,
+    AbortController, AbortSignal, DOMException, Event, EventTarget, structuredClone, atob, btoa, Intl, crypto: globalThis.crypto,
     addEventListener: () => undefined,
     __devsnipHost: {
       page, platform: process.platform === "win32" ? "win32" : "linux", home, tmpdir: os.tmpdir(), pathEnv: "", globalStorage,

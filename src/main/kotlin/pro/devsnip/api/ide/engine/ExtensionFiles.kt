@@ -22,10 +22,19 @@ object ExtensionFiles {
 
     val root: Path by lazy { unpack(Path.of(PathManager.getConfigPath(), "devsnip-pro", "extension")) }
 
+    /** Identifies the plugin's JAR; while it is the same one, what was unpacked is current. */
+    private fun buildStamp(): String? = runCatching {
+        Path.of(PathManager.getJarPathForClass(ExtensionFiles::class.java)!!).let { "${Files.size(it)}:${Files.getLastModifiedTime(it).toMillis()}" }
+    }.getOrNull()
+
     fun unpack(target: Path): Path {
+        val stamp = buildStamp()
+        val stampFile = target.resolve(".unpacked")
+        if (stamp != null && Files.isRegularFile(target.resolve("package.json")) && runCatching { Files.readString(stampFile) }.getOrNull() == stamp) return target
         Files.createDirectories(target)
         val list = resource("files.json") ?: error("The plugin's extension files are missing.")
         val files = JsonParser.parseString(String(list, Charsets.UTF_8)).asJsonArray.map { it.asString }
+        var failed = false
         for (name in files) {
             val dest = target.resolve(name).normalize()
             if (!dest.startsWith(target)) continue
@@ -39,8 +48,10 @@ object ExtensionFiles {
                 Files.move(temp, dest, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
             } catch (e: Exception) {
                 LOG.warn("DevSnip Pro: could not unpack $name", e)
+                failed = true
             }
         }
+        if (stamp != null && !failed) runCatching { Files.writeString(stampFile, stamp) }
         return target
     }
 

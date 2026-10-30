@@ -81,6 +81,14 @@ intellijPlatform {
         // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
+            <p><b>1.1.0</b>: up to date with DevSnip Pro for VS Code 11.84.0.</p>
+            <ul>
+              <li>Tool hubs with a category explorer, recent tools, collapsible groups and a compact view; tools organised into subsections</li>
+              <li>Tools open empty and run when you press Run, with an optional Live preview; results show status and time, are marked stale when inputs change, and have Run again and Clear results</li>
+              <li>Clicking a security finding opens the file at that line</li>
+              <li>Fixed: context menu entries that were hidden (Create Snippet, JWT Decoder, Scan for Vulnerabilities, Open in CSV &amp; Excel Viewer) and commands wrongly listed in Find Action</li>
+              <li>Less work on the UI thread at startup and when the extension host starts; faster snippet completion</li>
+            </ul>
             <p><b>1.0.0</b>: every feature of DevSnip Pro for VS Code.</p>
             <ul>
               <li>The extension's own code now runs in the IDE (an extension host per project): the Tools sidebar with points and level, Milestones &amp; Points (quests, streaks, rewards, theme unlocks), and points for the REST client's premium features</li>
@@ -138,6 +146,16 @@ intellijPlatform {
             create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
             // The Marketplace also verifies against the current EAP.
             create(IntelliJPlatformType.IntellijIdeaUltimate, "263.7307.44")
+            // ./gradlew verifyPlugin -PverifyAllIdes also checks the other IDEs (about 10 GB of downloads).
+            if (providers.gradleProperty("verifyAllIdes").isPresent) {
+                create(IntelliJPlatformType.WebStorm, "2026.2.4")
+                create(IntelliJPlatformType.PyCharmProfessional, "2026.2.4")
+                create(IntelliJPlatformType.GoLand, "2026.2.4")
+                create(IntelliJPlatformType.PhpStorm, "2026.2.4")
+                create(IntelliJPlatformType.RubyMine, "2026.2.4")
+                create(IntelliJPlatformType.CLion, "2026.2.4.1")
+                create(IntelliJPlatformType.Rider, "2026.2.4")
+            }
         }
     }
 }

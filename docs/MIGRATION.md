@@ -1,6 +1,6 @@
 # DevSnip Pro for VS Code → JetBrains: inventory and migration
 
-Source of truth: DevSnip Pro for VS Code **11.81.1** (`sayaib.hue-console`, repository
+Source of truth: DevSnip Pro for VS Code **11.84.0** (`sayaib.hue-console`, repository
 `sayaib/DevSnip-Pro`). This document lists everything the extension contributes and
 where each piece lives in the JetBrains plugin.
 
@@ -28,10 +28,11 @@ for points, quests, "Recently used" and onboarding exactly as in VS Code.
 | Contribution (package.json) | VS Code | JetBrains |
 |---|---|---|
 | Activity bar view `myView` (Tools sidebar) | Webview view | **DevSnip Pro** tool window; the extension's `ToolsSidebarProvider` renders it (rank card, points, onboarding, theme picker with locks). Falls back to the IDE-rendered sidebar if the extension host cannot start |
-| 146 commands | Command palette | Find Action and **Tools | DevSnip Pro** (palette-hidden aliases and the development-only `resetFeatureUsage` are omitted, as in VS Code's palette) |
+| 145 commands | Command palette | Find Action and **Tools | DevSnip Pro** (the 14 palette-hidden aliases and the development-only `resetFeatureUsage` are omitted, as in VS Code's palette; `when` clauses are evaluated by `WhenClause`, which handles parentheses, `||`, `&&` and `!`) |
 | `editor/context` → DevSnip Pro submenu (18 entries with `when` clauses) | Editor context menu | **DevSnip Pro** submenu in the editor popup, same `when` clauses evaluated (`WhenClause`) |
 | `explorer/context`: Scan for Vulnerabilities (OSV), Open in CSV & Excel Viewer | Explorer | Project view context menu, same conditions; OSV scans the selected files/folders |
 | `editor/title`: Open in CSV & Excel Viewer for CSV | Editor title button | The **Table** tab at the bottom of every .csv/.tsv/.tab editor |
+| Commands' `enablement` (`!isWeb && !devsnip.webHost`, 11.83) | Hides commands on VS Code for the web | Always available: the IDE is a desktop host. `webview/wording.mjs` makes the extension's Node check say so in every browser bundle, and the build fails if a tool page has no tool behind it |
 | Keybinding Ctrl+Alt+Shift+L → Insert Debug Log | Editor | `DevSnipPro.insertDebugLog`, Ctrl+Alt+Shift+L in the macOS keymaps. In the Windows/Linux keymap Ctrl+Alt+Shift+L is the IDE's Reformat File dialog, so no default is set there (assign one in Keymap) |
 | Custom editor `devsnip.spreadsheetViewer` (.xlsx, .xlsm, default) | Custom editor | `ExcelViewerProvider` (the only editor for workbooks) |
 | Custom editor `devsnip.csvViewer` (.csv, .tsv, .tab, optional) | Open With | `CsvViewerProvider` (Table tab next to the text); edits on the IDE undo stack, Save / Save All write the file, unsaved tables are offered for saving on close |
@@ -68,35 +69,34 @@ code bundled into the page).
 | GraphQL Formatter & Types | `graphqlTools` | Backend & API | Toolkit page (extension code in page) |
 | API Resource Scaffolder | `apiScaffolder` | Backend & API | Toolkit page (extension code in page) |
 | React / Next.js Generator | `reactGenerator` | Web & Frontend | Toolkit page (extension code in page) |
-| HTML → JSX Converter | `htmlToJsx` | Web & Frontend | Toolkit page (extension code in page) |
+| HTML → JSX | `htmlToJsx` | Web & Frontend | Toolkit page (extension code in page) |
 | CSS Units & Fluid Type | `cssUnits` | Web & Frontend | Toolkit page (extension code in page) |
 | Color Converter & Palette | `colorConverter` | Web & Frontend | Toolkit page (extension code in page) |
 | Color Palette | `colorPalette` | — | Toolkit page (extension code in page) |
 | SEO & Social Meta Tags | `metaTagsGenerator` | Web & Frontend | Toolkit page (extension code in page) |
-| Cache-Control Builder | `cacheControl` | Web & Frontend | Toolkit page (extension code in page) |
-| adb & simctl Command Builder | `deviceCommands` | Mobile Development | Toolkit page (extension code in page) |
+| Cache-Control Builder | `cacheControl` | Backend & API | Toolkit page (extension code in page) |
+| adb & simctl Commands | `deviceCommands` | Mobile Development | Toolkit page (extension code in page) |
 | Deep Links & Universal Links | `deepLinkHelper` | Mobile Development | Toolkit page (extension code in page) |
-| App Permissions Generator | `appPermissions` | Mobile Development | Toolkit page (extension code in page) |
-| Local API Access from Devices | `mobileLocalApi` | Mobile Development | Toolkit page (extension code in page) |
-| Environments & Build Flavors | `appEnvironments` | Mobile Development | Toolkit page (extension code in page) |
-| Signing, Keystores & Fingerprints | `appSigning` | Mobile Development | Toolkit page (extension code in page) |
+| App Permissions | `appPermissions` | Mobile Development | Toolkit page (extension code in page) |
+| Local API from Devices | `mobileLocalApi` | Mobile Development | Toolkit page (extension code in page) |
+| Environments & Flavors | `appEnvironments` | Mobile Development | Toolkit page (extension code in page) |
+| Signing & Keystores | `appSigning` | Mobile Development | Toolkit page (extension code in page) |
 | SDK & Build Compatibility | `sdkVersions` | Mobile Development | Toolkit page (extension code in page) |
 | Mobile CI Workflow | `mobileCiGenerator` | Mobile Development | Toolkit page (extension code in page) |
-| dp / px / pt Converter & Asset Sizes | `densityConverter` | Mobile Development | Toolkit page (extension code in page) |
+| dp / px / pt & Asset Sizes | `densityConverter` | Mobile Development | Toolkit page (extension code in page) |
 | Saved Snippets | `showSnippets` | Code & Productivity | Extension host |
 | Create Snippet | `createCustomSnippet` | Code & Productivity | Extension host |
 | Clean Debug Logs | `listAndRemoveConsoleLogs` | Testing & Debugging | Extension host |
 | Remove Unused Imports | `removeUnusedImports` | Code & Productivity | Extension host |
 | Dependencies & Installation | `dependencyManager` | Code & Productivity | Extension host |
 | README Viewer & Manager | `readmeManager` | Code & Productivity | Extension host |
-| OpenCode Integration | `openCodeIntegration` | Code & Productivity | Not included (left out of the build by `webview/wording.mjs`) |
 | Framework Snippets | `frameworkSnippets` | Code & Productivity | Extension host |
 | Unused Dependencies | `unusedDependencies` | Code & Productivity | Toolkit page (extension code in page) |
 | JSON / YAML / XML Formatter | `jsonFormatter` | Text & Formatters | Toolkit page (extension code in page) |
 | XML → JSON Converter | `xmlToJson` | Text & Formatters | Toolkit page (extension code in page) |
 | YAML / JSON Validator | `yamlJsonTool` | — | Toolkit page (extension code in page) |
 | Diff Checker | `textDiff` | Text & Formatters | Toolkit page (extension code in page) |
-| Regex Tester, Library & Code | `regexLibrary` | Text & Formatters | Toolkit page (extension code in page) |
+| Regex Tester & Library | `regexLibrary` | Text & Formatters | Toolkit page (extension code in page) |
 | Regex Tester | `regexBuilder` | — | Toolkit page (extension code in page) |
 | Case Converter & Text Tools | `caseConverter` | Text & Formatters | Toolkit page (extension code in page) |
 | Encode / Decode | `base64Encoder` | Encoders & Converters | Toolkit page (extension code in page) |
@@ -117,30 +117,30 @@ code bundled into the page).
 | Log Analyzer & Formatter | `observabilityAnalyze` | Testing & Debugging | Toolkit page (extension code in page) |
 | Mock Data Generator | `mockDataGenerator` | Testing & Debugging | Toolkit page (extension code in page) |
 | JSON Schema Validator | `jsonSchemaValidator` | Testing & Debugging | Toolkit page (extension code in page) |
-| Port & Network Toolkit | `networkTools` | Testing & Debugging | Toolkit page (extension code in page) |
+| Port & Network Toolkit | `networkTools` | DevOps & Cloud | Toolkit page (extension code in page) |
 | Insert Debug Log | `insertDebugLog` | Testing & Debugging | Extension host |
 | Remove Debug Logs in This File | `removeDebugLogsInFile` | — | Extension host |
 | Run & Debug Configurations | `debugConfigGenerator` | Testing & Debugging | Toolkit page (extension code in page) |
 | Git Command Recipes | `gitRecipes` | Git & Version Control | Toolkit page (extension code in page) |
 | .gitignore Generator | `gitignoreGenerator` | Git & Version Control | Toolkit page (extension code in page) |
-| Semver & App Version Calculator | `semverCalculator` | Git & Version Control | Toolkit page (extension code in page) |
-| Dockerfile Generator & Linter | `dockerfileHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
-| Docker Compose Generator & Validator | `composeHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
+| Semver & App Versions | `semverCalculator` | Git & Version Control | Toolkit page (extension code in page) |
+| Dockerfile | `dockerfileHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
+| Docker Compose | `composeHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
 | docker run → Compose | `dockerRunToCompose` | DevOps & Cloud | Toolkit page (extension code in page) |
-| CI Pipeline Generator | `ciPipelineGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
-| .env Checker & Generator | `envChecker` | DevOps & Cloud | Toolkit page (extension code in page) |
-| Kubernetes & Helm Generator / Validator | `kubernetesHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
+| CI Pipeline | `ciPipelineGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
+| .env Checker | `envChecker` | DevOps & Cloud | Toolkit page (extension code in page) |
+| Kubernetes & Helm | `kubernetesHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
 | Cloud Deploy Workflow | `cloudDeployGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
 | Cron Expression Helper | `cronHelper` | DevOps & Cloud | Toolkit page (extension code in page) |
-| Nginx Config Generator | `nginxConfig` | DevOps & Cloud | Toolkit page (extension code in page) |
-| Health Check Generator | `healthCheckGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
+| Nginx Config | `nginxConfig` | DevOps & Cloud | Toolkit page (extension code in page) |
+| Health Check Endpoints | `healthCheckGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
 | Terraform Starter | `terraformGenerator` | DevOps & Cloud | Toolkit page (extension code in page) |
-| PM2 Ecosystem Generator | `pm2Config` | DevOps & Cloud | Toolkit page (extension code in page) |
+| PM2 Ecosystem | `pm2Config` | DevOps & Cloud | Toolkit page (extension code in page) |
 | Observability Starter | `observabilityStarter` | DevOps & Cloud | Toolkit page (extension code in page) |
 | JWT Decoder & Signer | `jwtDecoder` | Security & Auth | Toolkit page (extension code in page) |
 | Workspace Security Audit | `securityAudit` | Security & Auth | Extension host |
-| Hash, HMAC & Webhook Signatures | `hashGenerator` | Security & Auth | Toolkit page (extension code in page) |
-| OAuth 2.0 & PKCE Helper | `oauthPkce` | Security & Auth | Toolkit page (extension code in page) |
+| Hash, HMAC & Webhooks | `hashGenerator` | Security & Auth | Toolkit page (extension code in page) |
+| OAuth 2.0 & PKCE | `oauthPkce` | Security & Auth | Toolkit page (extension code in page) |
 | CSP & Security Headers | `securityHeaders` | Security & Auth | Toolkit page (extension code in page) |
 | Endpoint Security Scan | `endpointSecurityScan` | Security & Auth | Extension host |
 | Cookie Inspector & Builder | `cookieInspector` | Security & Auth | Toolkit page (extension code in page) |
@@ -150,19 +150,19 @@ code bundled into the page).
 | SCA Scanner | `scaScanner` | Security & Auth | Native page (extension code in page) |
 | Scan Dependencies (SCA: vulnerabilities, exploited CVEs, dependency health) | `scaScanWorkspace` | — | Native page (extension code in page) |
 | Scan for Vulnerabilities (OSV) | `osvScanFile` | — | Native page (extension code in page) |
-| Certificate & SSL Pinning Inspector | `certInspector` | Security & Auth | Toolkit page (extension code in page) |
+| Certificate & SSL Pinning | `certInspector` | Security & Auth | Toolkit page (extension code in page) |
 | Cloud & Container Audit | `cloudSecurityAudit` | Security & Auth | Extension host |
 | Prompt Builder | `promptTemplate` | AI & ML | Toolkit page (extension code in page) |
 | LLM Models, Tokens & Cost | `tokenCounter` | AI & ML | Toolkit page (extension code in page) |
 | LLM Model Comparison | `modelComparison` | — | Toolkit page (extension code in page) |
 | LLM Client Setup | `llmClientSetup` | AI & ML | Toolkit page (extension code in page) |
-| LLM Output Cleaner & JSON Validator | `llmJsonValidator` | AI & ML | Toolkit page (extension code in page) |
+| LLM Output & JSON | `llmJsonValidator` | AI & ML | Toolkit page (extension code in page) |
 | LLM Response Formatter | `llmResponseFormatter` | — | Toolkit page (extension code in page) |
 | LLM API Tester | `llmApiTester` | AI & ML | Toolkit page (extension code in page) |
 | JSON → TOON for Prompts | `jsonToToon` | AI & ML | Toolkit page (extension code in page) |
 | AI App Starter | `aiAppStarter` | AI & ML | Toolkit page (extension code in page) |
 | AI/ML Code Snippets | `mlCodeGen` | AI & ML | Toolkit page (extension code in page) |
-| GPU Memory & Speed Estimator | `gpuVram` | AI & ML | Toolkit page (extension code in page) |
+| GPU Memory & Speed | `gpuVram` | AI & ML | Toolkit page (extension code in page) |
 | Model Serving Starter | `mlopsGenerator` | AI & ML | Toolkit page (extension code in page) |
 | Model Metrics | `metricsCalculator` | AI & ML | Toolkit page (extension code in page) |
 | Dataset Split Planner | `datasetSplit` | AI & ML | Toolkit page (extension code in page) |
@@ -188,7 +188,7 @@ code bundled into the page).
 | Schema Viewer & Diff | `schemaViewer` | Data & RAG | Toolkit page (extension code in page) |
 | Schema Diff | `schemaDiff` | — | Toolkit page (extension code in page) |
 | Partition & File Size Planner | `partitionCalc` | Data & RAG | Toolkit page (extension code in page) |
-| Spark Cluster & Cost Estimator | `sparkCostEstimator` | Data & RAG | Toolkit page (extension code in page) |
+| Spark Cluster & Cost | `sparkCostEstimator` | Data & RAG | Toolkit page (extension code in page) |
 | Delta Lake Log Analyzer | `deltaLakeAnalyzer` | Data & RAG | Toolkit page (extension code in page) |
 | Security Hub | `securityHub` | — | Extension host |
 | Milestone & Points Tracker | `milestoneTracker` | — | Extension host |
@@ -221,5 +221,6 @@ code bundled into the page).
 | Run & Debug Configurations tool | Generates VS Code `launch.json`, as in VS Code | It is a generator whose output format is VS Code's; unchanged on purpose |
 | PostgreSQL client certificates | The key must be PKCS#8 (`BEGIN PRIVATE KEY`) | The JDBC driver does not read PKCS#1 PEM keys; the error says how to convert |
 | SQL Server | SQL Server logins only (as in VS Code) | Same as the extension |
+| VS Code for the web (11.83) | Not applicable | The JetBrains plugin is always the extension's Desktop edition, with all tools |
 | IDEs without JCEF | Only the REST client and the seven Backend & API tools (native Swing) | The extension's code needs the embedded browser |
 | Resetting feature counters | Not ported | Development-only command in VS Code |

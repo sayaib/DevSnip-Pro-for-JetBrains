@@ -22,6 +22,7 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import vm from "vm";
 import { WORDING, reword } from "./wording.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -247,6 +248,21 @@ await build({
   logLevel: "warning"
 });
 execFileSync(process.execPath, [exporter, out], { stdio: "inherit", env: { ...process.env, DEVSNIP_VSCODE_REPO_RESOLVED: repo } });
+
+// A web-only filter in the bundles would drop tools without any build error, so count them.
+const inRuntime = (() => {
+  const sandbox = { console, setTimeout, clearTimeout, TextEncoder, TextDecoder, URL, URLSearchParams, crypto: globalThis.crypto, atob, btoa };
+  sandbox.globalThis = sandbox;
+  sandbox.self = sandbox;
+  vm.runInNewContext(fs.readFileSync(path.join(out, "toolkit-runtime.js"), "utf8"), sandbox);
+  return sandbox.DevSnipToolkit.ids();
+})();
+const exported = Object.keys(JSON.parse(fs.readFileSync(path.join(out, "tools.json"), "utf8")));
+const dropped = exported.filter(id => !inRuntime.includes(id));
+if (dropped.length) {
+  console.error(`Tools with a page but missing from toolkit-runtime.js: ${dropped.join(", ")}`);
+  process.exit(1);
+}
 
 // 3. The pages' own scripts and the codicon font, unchanged.
 for (const file of ["tools-sidebar.js", "toolkit.js", "osv-scanner.js", "sca-scanner.js", "sca-model.js", "reward-effects.js"]) {

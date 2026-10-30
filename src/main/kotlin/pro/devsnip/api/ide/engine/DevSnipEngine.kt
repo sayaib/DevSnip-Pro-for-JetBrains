@@ -24,6 +24,7 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.EnvironmentUtil
+import com.intellij.util.concurrency.AppExecutorUtil
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefJSDialogCallback
@@ -103,10 +104,16 @@ class DevSnipEngine(val project: Project) : Disposable {
             status = Status.STARTING
             failure = null
         }
-        // The local server's address is looked up off the UI thread (it may still be starting).
+        // Off the UI thread: the local server may still be starting, and the host's data unpacks the extension.
         ApplicationManager.getApplication().executeOnPooledThread {
-            val syncUrl = EngineSyncServer.register(this)
-            ApplicationManager.getApplication().invokeLater({ create(syncUrl) }, project.disposed)
+            try {
+                val syncUrl = EngineSyncServer.register(this)
+                val info = hostInfo().apply { syncUrl?.let { addProperty("syncUrl", it) } }
+                ApplicationManager.getApplication().invokeLater({ create(info, syncUrl) }, project.disposed)
+            } catch (e: Exception) {
+                LOG.warn("DevSnip Pro: the extension host could not be prepared", e)
+                fail(e.message ?: e.javaClass.simpleName)
+            }
         }
     }
 
@@ -125,7 +132,7 @@ class DevSnipEngine(val project: Project) : Disposable {
         if (now != null) callback(now) else start()
     }
 
-    private fun create(syncUrl: String?) {
+    private fun create(info: JsonObject, syncUrl: String?) {
         if (project.isDisposed || browser != null) return
         try {
             // Queries and handlers are added before the native browser exists (newer JCEF, out of process
@@ -172,16 +179,14 @@ class DevSnipEngine(val project: Project) : Disposable {
                     fail("The extension host stopped ($status).")
                 }
             }, b.cefBrowser)
-            val info = hostInfo().apply { syncUrl?.let { addProperty("syncUrl", it) } }
             val page = EnginePage.write(info, q.inject("request"), "engine-${INSTANCE.incrementAndGet()}", syncUrl)
             pageFile = page
             b.createImmediately()
             b.loadURL(page.toUri().toString())
             // A host that never reports back is treated as failed, so commands do not wait forever.
-            ApplicationManager.getApplication().executeOnPooledThread {
-                Thread.sleep(TimeUnit.SECONDS.toMillis(START_TIMEOUT_SECONDS))
+            AppExecutorUtil.getAppScheduledExecutorService().schedule({
                 if (status == Status.STARTING) fail("The extension host did not start within $START_TIMEOUT_SECONDS seconds.")
-            }
+            }, START_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (e: Throwable) {
             LOG.warn("DevSnip Pro: the extension host could not be created", e)
             fail(e.message ?: e.javaClass.simpleName)

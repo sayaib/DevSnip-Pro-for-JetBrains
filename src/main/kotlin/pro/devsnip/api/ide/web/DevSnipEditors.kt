@@ -147,10 +147,12 @@ class ToolPageEditor(private val project: Project, private val file: DevSnipVirt
         browser.load(WebviewAssets.toolHtml(file.toolId, file.initial, state, hostInfo, browser.queryFunction, browser.instance))
     }
 
+    /** Evaluates an expression in the page (diagnostics). */
+    fun probe(expression: String) = browser.probe(expression)
+
     fun setValues(values: JsonObject) = browser.post(JsonObject().apply {
         addProperty("type", "setValues")
         add("values", values)
-        addProperty("run", true)
     })
 
     override fun getComponent(): JComponent = browser.component

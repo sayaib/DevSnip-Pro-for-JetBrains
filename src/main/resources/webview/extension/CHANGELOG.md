@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.1.0] - 2026-10-30
+
+Up to date with DevSnip Pro for VS Code 11.84.0, more dependable menus, and less work on the UI thread. See docs/RELEASE-1.1.0.md for the tests and measurements.
+
+### Added
+- **From the VS Code extension (11.82 to 11.84)**: tool hubs with an expandable category explorer, recently opened tools, collapsible groups and a compact view; tools organised into purpose-based subsections, in the sidebar, hub and search.
+- **Explicit runs**: tool pages open empty and run when you press Run; supported tools offer a Live preview option. Results show their status and time, are marked stale when inputs change, and have Run again and Clear results.
+- **Execution status** in the API and database clients, the security scanners and Dependencies & Installation.
+- **Security findings**: clicking a workspace or cloud finding opens the file, selects the line and centers it.
+- **Performance budget tests** and `scripts/benchmark-startup.sh`, which measures what a plugin build adds to opening a project.
+
+### Fixed
+- Context menus: entries whose conditions use parentheses or `||` were hidden (Create Snippet and JWT Decoder in the editor menu; Scan for Vulnerabilities and Open in CSV & Excel Viewer in the Project view). `when` clauses now have a real parser.
+- Find Action listed commands VS Code hides when their condition was more than the bare word `false` or `isDevelopment`.
+- The extension's database connections no longer reopen after you disconnect, late replies no longer overwrite newer results, and lazy-loaded commands no longer race (fixes from the VS Code extension).
+
+### Changed
+- Opening the extension host no longer does file work on the UI thread: the extension folder is unpacked and the host's data gathered on a background thread.
+- The extension folder is unpacked only when the plugin's JAR changes, not on every start.
+- Snippet completion reads nothing until there is a prefix to match, and builds entries only for snippets that match it.
+- Menu data is parsed in the background; the start-up timeout no longer holds a thread for 60 seconds; regular expressions in menu conditions are compiled once; global state is serialised when saved rather than on every change.
+
+### Removed
+- OpenCode Integration, as in the VS Code extension (11.82.1). It was never part of the JetBrains plugin.
+- The donation promotion on the milestones page, as in the VS Code extension (11.83.3).
+
 ## [1.0.0] - 2026-10-26
 
 The rest of DevSnip Pro for VS Code: every command, page and workflow of the extension (11.81.1) now runs in JetBrains IDEs. See docs/MIGRATION.md for the feature-by-feature map.

@@ -29,20 +29,19 @@ class SnippetCompletionContributor : CompletionContributor() {
     init {
         extend(CompletionType.BASIC, PlatformPatterns.psiElement(), object : CompletionProvider<CompletionParameters>() {
             override fun addCompletions(parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet) {
-                val file = parameters.originalFile.virtualFile ?: return
-                val language = VsCodeLanguages.idOf(file.name, file.fileType.name)
-                val snippets = Snippets.forLanguage(language)
-                if (snippets.isEmpty()) return
-                val document = parameters.editor.document
+                // Runs on every completion in every file: nothing is read until there is something to match.
                 val caret = parameters.offset
-                val text = document.charsSequence
+                val text = parameters.editor.document.charsSequence
                 var start = caret
                 while (start > 0 && (text[start - 1].isLetterOrDigit() || text[start - 1] in "_-.:@!#$")) start--
-                val typed = text.subSequence(start, caret).toString()
-                if (typed.isEmpty()) return
-                val matching = result.withPrefixMatcher(typed)
+                if (start == caret) return
+                val file = parameters.originalFile.virtualFile ?: return
+                val snippets = Snippets.forLanguage(VsCodeLanguages.idOf(file.name, file.fileType.name))
+                if (snippets.isEmpty()) return
+                val matching = result.withPrefixMatcher(text.subSequence(start, caret).toString())
                 for (snippet in snippets) {
                     for (prefix in snippet.prefixes) {
+                        if (!matching.prefixMatcher.prefixMatches(prefix)) continue
                         matching.addElement(
                             LookupElementBuilder.create(snippet, prefix)
                                 .withIcon(DevSnipIcons.TOOL)

@@ -31,11 +31,12 @@ import { classifyInstall, initAnalytics, snapshotInstall, trackCommand } from "@
 import { initActivation, noteCommand } from "@devsnip/onboarding/activation";
 import { registerOnboardingCommands } from "@devsnip/onboarding/commands";
 import { executeQueuedCommand } from "@devsnip/utils/command-dispatch";
+import { registerUniversalToolSearch } from "@devsnip/commands/toolSearch";
 import { FeatureAccessService } from "@devsnip/premium/feature-access";
 import { registerPremiumCommands } from "@devsnip/premium/premium-commands";
 import { ToolsSidebarProvider, TOOLS_VIEW_ID } from "@devsnip/sidebar/tools-sidebar";
 import { renderMarkdown } from "@devsnip/utils/markdown";
-import { escapeHtml, getNonce, openToolPanel } from "@devsnip/utils/webview-ui";
+import { escapeHtml, getNonce, openToolPanel, setToolPanelLogo } from "@devsnip/utils/webview-ui";
 import { setWebviewHtml } from "@devsnip/theme/service";
 import manifest from "@devsnip-manifest";
 
@@ -76,55 +77,6 @@ async function restoreSnippetsAfterUpdate(liveFolder, backup, extensionPath) {
   } catch (error) {
     console.error("DevSnip Pro: could not restore snippets.", error);
   }
-}
-
-// ----------------------------------------------------------- tool search
-
-async function searchableTools() {
-  const { NAV } = await import("@devsnip/toolkits/layout");
-  const { findTool } = await import("@devsnip/toolkits/registry");
-  const tools = NAV.flatMap(section => section.entries.map(entry => {
-    const tool = entry.tool ? findTool(entry.tool) : undefined;
-    const keywords = (tool?.keywords ?? entry.keywords ?? []).slice(0, 5);
-    return { label: tool?.title ?? entry.label, description: [section.title, entry.category, ...keywords].filter(Boolean).join(" / "), command: COMMAND_PREFIX + entry.command };
-  }));
-  return [
-    ...tools,
-    { label: "Browse All Tools", description: "All sections, with search and pinning", command: `${COMMAND_PREFIX}advancedToolsHub` },
-    { label: "Security Hub", description: "Security & Auth / every security scan in one panel", command: `${COMMAND_PREFIX}securityHub` },
-    { label: "Milestone & Points Tracker", description: "Progress", command: `${COMMAND_PREFIX}milestoneTracker` }
-  ];
-}
-
-/** "Search All Tools (Regex)", as the extension registers it in extention.ts. */
-function registerUniversalToolSearch(context) {
-  context.subscriptions.push(registerTrackedCommand(`${COMMAND_PREFIX}searchTools`, async () => {
-    const pattern = await vscode.window.showInputBox({
-      title: "Search DevSnip Pro Tools",
-      prompt: "Enter a regular expression to match tool names, categories, or commands",
-      placeHolder: "e.g. json|schema|rag|calculator",
-      value: ""
-    });
-    if (pattern === undefined) return;
-    let matcher;
-    try {
-      matcher = new RegExp(pattern || ".*", "i");
-    } catch (error) {
-      vscode.window.showErrorMessage(`Invalid regular expression: ${error instanceof Error ? error.message : String(error)}`);
-      return;
-    }
-    const tools = await searchableTools();
-    const matches = tools.filter(tool => matcher.test(`${tool.label} ${tool.description} ${tool.command}`));
-    if (!matches.length) {
-      vscode.window.showInformationMessage("No DevSnip Pro tools matched that regular expression.");
-      return;
-    }
-    const selected = await vscode.window.showQuickPick(
-      matches.map(tool => ({ label: tool.label, description: tool.description, detail: tool.command, command: tool.command })),
-      { title: `${matches.length} matching DevSnip Pro tool${matches.length === 1 ? "" : "s"}`, matchOnDescription: true, matchOnDetail: true }
-    );
-    if (selected) await executeQueuedCommand(selected.command);
-  }));
 }
 
 // ------------------------------------------- walkthrough and markdown pages
@@ -248,6 +200,7 @@ function activate() {
   if (activated) return;
   activated = true;
   const context = extensionContext();
+  setToolPanelLogo(context.extensionUri);
   const installSnapshot = snapshotInstall(context);
   const snippetsFolderPath = path.join(context.extensionPath, "custom");
 

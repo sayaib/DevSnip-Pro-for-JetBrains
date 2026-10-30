@@ -293,7 +293,6 @@ All settings are optional.
 - **Response size**: responses over 100 MB are refused, to protect the IDE's memory.
 - **Cookies**: they are simple per-host `name=value` pairs and last for the IDE session.
 - **Shared state**: history and environments are shared by all projects.
-- **OpenCode**: the VS Code extension's OpenCode Integration is not included.
 
 The full feature-by-feature map, with every platform difference, is in
 [docs/MIGRATION.md](docs/MIGRATION.md).
@@ -328,7 +327,7 @@ against, about 1 GB on the first build. No environment variables are needed.
 ./gradlew buildPlugin
 ```
 
-The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.0.0.zip`.
+The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.1.0.zip`.
 
 ```bash
 ./gradlew runIde
@@ -365,8 +364,8 @@ contacted.
 
 ## Publishing
 
-The 1.0.0 release checklist, with its test results, is in
-[docs/RELEASE-1.0.0.md](docs/RELEASE-1.0.0.md).
+The current release checklist, with its test results and measurements, is in
+[docs/RELEASE-1.1.0.md](docs/RELEASE-1.1.0.md).
 
 1. **Signing key (one time).** Create a certificate as described in
    [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html), and
@@ -380,7 +379,7 @@ The 1.0.0 release checklist, with its test results, is in
    ./gradlew signPlugin
    ```
 
-   Upload `build/distributions/devsnip-pro-jetbrains-1.0.0-signed.zip` at
+   Upload `build/distributions/devsnip-pro-jetbrains-1.1.0-signed.zip` at
    [plugins.jetbrains.com](https://plugins.jetbrains.com) (your profile → **Add new
    plugin**), with the MIT licence and the source URL. JetBrains reviews new plugins
    before listing them.

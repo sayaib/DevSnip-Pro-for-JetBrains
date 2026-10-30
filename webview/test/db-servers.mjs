@@ -93,7 +93,11 @@ const SERVERS = {
   sqlserver: { url: "Server=127.0.0.1,31433;Database=master;User Id=sa;Password=DevSnip!2026x;Encrypt=false", table: "people", schema: "dbo" },
   oracle: { url: "oracle://system:devsnip@127.0.0.1:31521/FREEPDB1", table: "PEOPLE", schema: "SYSTEM" },
   clickhouse: { url: "clickhouse://default:devsnip@127.0.0.1:38123/default", table: "people" },
-  redis: { url: "redis://:devsnip@127.0.0.1:36379/0" }
+  redis: { url: "redis://:devsnip@127.0.0.1:36379/0" },
+  postgres: { url: "postgresql://postgres:devsnip@127.0.0.1:35432/app", table: "people", schema: "public" },
+  // The server only accepts TLS (scripts/db-containers.sh).
+  "postgres-tls": { url: "postgresql://postgres:devsnip@127.0.0.1:35433/app?sslmode=require", table: "people", schema: "public" },
+  cockroachdb: { url: "cockroachdb://root@127.0.0.1:36257/app?sslmode=disable", table: "people", schema: "public" }
 };
 
 const DDL = {
@@ -103,6 +107,9 @@ const DDL = {
   clickhouse: ["DROP TABLE IF EXISTS people", "CREATE TABLE people (id UInt32, name String, score Decimal(6,2), born Nullable(DateTime), big Int64) ENGINE = MergeTree ORDER BY id", "INSERT INTO people VALUES (1, 'Ada', 9.50, '2015-12-10 08:00:00', 9007199254740993), (2, 'Linus', 7.25, NULL, 1)"]
 };
 DDL.mariadb = DDL.mysql;
+DDL.postgres = ["DROP TABLE IF EXISTS people", "CREATE TABLE people (id SERIAL PRIMARY KEY, name VARCHAR(50) NOT NULL, score DECIMAL(6,2), born TIMESTAMP, big BIGINT, meta JSONB, raw BYTEA)", "INSERT INTO people (name, score, born, big, meta, raw) VALUES ('Ada', 9.50, '1815-12-10 08:00:00', 9007199254740993, '{\"lang\":\"en\"}', '\\x0102'), ('Linus', 7.25, NULL, 1, NULL, NULL)"];
+DDL["postgres-tls"] = DDL.postgres;
+DDL.cockroachdb = DDL.postgres;
 
 let failures = 0;
 const results = [];
@@ -236,7 +243,7 @@ async function run(kind, mode = "ide") {
     throw new Error("the bad query ran");
   });
   await step("cancel a long query", async () => {
-    const sleep = { mysql: "SELECT SLEEP(20)", mariadb: "SELECT SLEEP(20)", sqlserver: "WAITFOR DELAY '00:00:20'", oracle: "BEGIN DBMS_SESSION.SLEEP(20); END;", clickhouse: "SELECT sleepEachRow(1) FROM numbers(20) SETTINGS max_block_size = 1" }[kind];
+    const sleep = { mysql: "SELECT SLEEP(20)", mariadb: "SELECT SLEEP(20)", sqlserver: "WAITFOR DELAY '00:00:20'", oracle: "BEGIN DBMS_SESSION.SLEEP(20); END;", clickhouse: "SELECT sleepEachRow(1) FROM numbers(20) SETTINGS max_block_size = 1", postgres: "SELECT pg_sleep(20)", "postgres-tls": "SELECT pg_sleep(20)", cockroachdb: "SELECT pg_sleep(20)" }[kind];
     const started = Date.now();
     const running = call("runQuery", { id, text: sleep, database, schema: spec.schema, runId: "long" }).then(() => "finished", e => e.message);
     await new Promise(r => setTimeout(r, 2000));

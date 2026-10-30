@@ -45,10 +45,13 @@ class DevSnipSelfTest : ProjectActivity {
 
     private fun run(project: Project) {
         Thread.sleep(3000)
+        log("perf: engine before first use=${DevSnipEngine.getInstance(project).status} actions on UI thread=${DevSnipActions.registerMillis} ms")
         val engine = DevSnipEngine.getInstance(project)
         val ready = CompletableFuture<Boolean>()
+        val started = System.nanoTime()
         engine.whenReady { ready.complete(it) }
         val ok = runCatching { ready.get(120, TimeUnit.SECONDS) }.getOrDefault(false)
+        log("perf: extension host ready in ${(System.nanoTime() - started) / 1_000_000} ms")
         log("engine ready=$ok status=${engine.status} failure=${engine.failure} commands=${engine.commands.size} sidebar=${engine.providesSidebar}")
         if (!ok) return
         val extension = ExtensionFiles.root.toString().replace('\\', '/')
@@ -61,7 +64,9 @@ class DevSnipSelfTest : ProjectActivity {
             "databaseClient", "getStarted", "whatsNew", "curlConverter", "osvScanner", "openGUI",
         ).map { WEB_PREFIX + it }
         for (command in commands) {
+            val opened = System.nanoTime()
             val error = runCatching { engine.execute(command).get(60, TimeUnit.SECONDS) }.getOrElse { "timeout: ${it.message}" }
+            log("perf: ${command.removePrefix(WEB_PREFIX)} ran in ${(System.nanoTime() - opened) / 1_000_000} ms")
             Thread.sleep(2500)
             val page = edt { FileEditorManager.getInstance(project).selectedEditor }
             val probe = when (page) {
@@ -72,6 +77,13 @@ class DevSnipSelfTest : ProjectActivity {
             val result = runCatching { probe.get(20, TimeUnit.SECONDS) }.getOrElse { JsonObject().apply { addProperty("error", "probe timeout") } }
             log("$command -> error=$error page=${page?.name} ${result}")
         }
+
+        // A tool that needs the desktop host: it opens empty and runs only when asked (explicit run).
+        engine.execute(WEB_PREFIX + "jwtDecoder").get(30, TimeUnit.SECONDS)
+        Thread.sleep(2500)
+        val tool = edt { FileEditorManager.getInstance(project).selectedEditor } as? pro.devsnip.api.ide.web.ToolPageEditor
+        val run = tool?.probe(RUN_TOOL_SCRIPT)?.let { runCatching { it.get(20, TimeUnit.SECONDS) }.getOrElse { e -> JsonObject().apply { addProperty("error", e.toString()) } } }
+        log("tool run -> $run")
 
         // The Tools sidebar from the extension's provider.
         edt { ToolWindowManager.getInstance(project).getToolWindow(pro.devsnip.api.ide.ui.ApiToolWindowFactory.TOOL_WINDOW_ID)?.activate(null) }
@@ -108,11 +120,26 @@ class DevSnipSelfTest : ProjectActivity {
             log("insertDebugLog -> error=$error changed=${before != after} added=${after.lines().filter { it !in before.lines() }}")
             edt { FileDocumentManager.getInstance().reloadFromDisk(editor.document) }
         }
+        logMemory(engine)
         log("done")
+    }
+
+    private fun logMemory(engine: DevSnipEngine) {
+        val heap = engine.probe("JSON.stringify({used:performance.memory.usedJSHeapSize,total:performance.memory.totalJSHeapSize})")
+        log("perf: extension host JS heap ${runCatching { heap.get(20, TimeUnit.SECONDS) }.getOrNull()}")
+        System.gc()
+        val runtime = Runtime.getRuntime()
+        log("perf: IDE heap used ${(runtime.totalMemory() - runtime.freeMemory()) / 1_048_576} MB")
     }
 
     companion object {
         private val LOG = Logger.getInstance(DevSnipSelfTest::class.java)
         private const val WEB_PREFIX = "sayaib.hue-console."
+
+        /** Fills in a token, presses Run, and reports the page before and after. */
+        private const val RUN_TOOL_SCRIPT = "new Promise(function(done){var r=document.getElementById('results');var before=r.querySelector('.ds-execution')?'bar':'empty';" +
+            "var t=document.querySelector('textarea');t.value='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.c2ln';t.dispatchEvent(new Event('input',{bubbles:true}));" +
+            "document.querySelector('.run-row button.btn').click();setTimeout(function(){var e=r.querySelector('.ds-execution');" +
+            "done(before+' -> '+(e?e.getAttribute('data-state')+' | '+e.textContent:'no execution bar')+' | '+r.innerText.replace(/\\s+/g,' ').slice(0,100))},1000)})"
     }
 }

@@ -154,7 +154,7 @@ export function createIde(options = {}) {
         if (text === null) return null;
         return { path: p.path, text, languageId: languageOf(p.path), version: 1, isDirty: ide.docs.has(p.path) };
       }
-      case "doc.show": { const text = readDoc(p.path); ide.shown = p.path; return text === null ? null : { id: `e:${p.path}`, path: p.path, text, languageId: languageOf(p.path), version: 1, selections: [] }; }
+      case "doc.show": { const text = readDoc(p.path); ide.shown = p.path; ide.shownSelection = p.selection; return text === null ? null : { id: `e:${p.path}`, path: p.path, text, languageId: languageOf(p.path), version: 1, selections: [] }; }
       case "doc.showUntitled": ide.untitled = p; return { id: `u:${p.id}`, name: p.name, text: p.text, languageId: p.languageId, version: 1, selections: [] };
       case "doc.save": if (ide.docs.has(p.path)) { fs.writeFileSync(p.path, ide.docs.get(p.path)); ide.docs.delete(p.path); } return null;
       case "doc.saveAll": for (const [file, text] of ide.docs) fs.writeFileSync(file, text); ide.docs.clear(); return null;
@@ -173,7 +173,8 @@ export function createIde(options = {}) {
         ide.snippets = (ide.snippets || []).concat(p.snippet);
         return { ok: true, text: next };
       }
-      case "editor.select": case "editor.reveal": return null;
+      case "editor.select": return null;
+      case "editor.reveal": ide.revealed = p.range; return null;
       case "workspace.applyEdit": {
         for (const file of p.edits) {
           const text = readDoc(file.path) ?? "";

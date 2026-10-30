@@ -23,6 +23,7 @@ import pro.devsnip.api.ide.web.EditorTracker
 import pro.devsnip.api.ide.web.ScannerHost
 import pro.devsnip.api.ide.web.WebviewAssets
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The extension's commands in the IDE, from its package.json: every command
@@ -48,7 +49,7 @@ object DevSnipActions {
     /** Commands for Find Action: those VS Code's command palette shows (its `when` is not "false"), without development-only ones. */
     val commands: List<Command> by lazy {
         val palette = contributions.getAsJsonObject("menus").getAsJsonArray("commandPalette").map { it.asJsonObject }
-        val hidden = palette.filter { it["when"]?.asString in setOf("false", "isDevelopment") }.map { it["command"].asString }.toSet()
+        val hidden = palette.filter { WhenClause.neverHolds(it["when"]?.asString) }.map { it["command"].asString }.toSet()
         contributions.getAsJsonArray("commands").map { it.asJsonObject }
             .filter { it["command"].asString !in hidden }
             .map { Command(it["command"].asString, cleanTitle(it["title"].asString, it["category"]?.asString)) }
@@ -64,16 +65,30 @@ object DevSnipActions {
     fun menu(name: String): List<Pair<String, String?>> =
         contributions.getAsJsonObject("menus").getAsJsonArray(name)?.map { it.asJsonObject }?.filter { it.has("command") }?.map { it["command"].asString to it["when"]?.asString }.orEmpty()
 
+    /** How long the last [registerOnce] held the UI thread (reported by DevSnipSelfTest). */
+    @Volatile
+    var registerMillis = 0L
+        private set
+
     private val registered = mutableListOf<String>()
     private val added = mutableListOf<Pair<DefaultActionGroup, AnAction>>()
     private var done = false
 
     private fun actionId(command: String) = "DevSnipPro." + command.removePrefix(PREFIX)
 
+    /** Reads what [registerOnce] needs, so parsing the plugin's JSON stays off the UI thread. */
+    fun prepare() {
+        commands.size
+        titles.size
+        contributions.size()
+        WebviewAssets.entries.size
+    }
+
     /** Registers the actions (on the EDT, once per plugin load). */
     fun registerOnce() {
         if (done) return
         done = true
+        val started = System.nanoTime()
         val manager = ActionManager.getInstance()
         val actions = LinkedHashMap<String, AnAction>()
         for (command in commands) {
@@ -111,6 +126,7 @@ object DevSnipActions {
         (manager.getAction("DevSnipPro.ProjectViewContext") as? DefaultActionGroup)?.let { group ->
             for ((command, condition) in menu("explorer/context")) add(group, ContextAction(command, title(command), condition, Place.EXPLORER))
         }
+        registerMillis = (System.nanoTime() - started) / 1_000_000
     }
 
     private fun add(group: DefaultActionGroup, action: AnAction) {
@@ -202,43 +218,80 @@ object DevSnipActions {
     }
 }
 
-/** package.json `when` clauses as the menus use them: `&&`, `!`, `==`, `=~ /regex/flags`, and context keys. */
+/** package.json `when` clauses: `||`, `&&`, `!`, parentheses, `==`, `!=`, `=~ /regex/flags` and context keys. */
 object WhenClause {
-    fun holds(clause: String?, context: Map<String, Any?>): Boolean {
-        if (clause.isNullOrBlank()) return true
-        return split(clause).all { term(it.trim(), context) }
+    private val patterns = ConcurrentHashMap<String, Regex>()
+
+    fun holds(clause: String?, context: Map<String, Any?>): Boolean = clause.isNullOrBlank() || eval(clause, context)
+
+    /** False whatever the context: "false" or "isDevelopment" (never set here) is one of its `&&` terms. */
+    fun neverHolds(clause: String?): Boolean = !clause.isNullOrBlank() && split(unwrap(clause), "&&").any { unwrap(it) in NEVER }
+
+    private fun eval(expression: String, context: Map<String, Any?>): Boolean {
+        val text = unwrap(expression)
+        split(text, "||").takeIf { it.size > 1 }?.let { parts -> return parts.any { eval(it, context) } }
+        split(text, "&&").takeIf { it.size > 1 }?.let { parts -> return parts.all { eval(it, context) } }
+        if (text.startsWith("!(")) return !eval(text.substring(1), context)
+        return term(text, context)
     }
 
-    /** Splits on && outside regular expressions. */
-    private fun split(clause: String): List<String> {
-        val parts = mutableListOf<String>()
+    /** Calls [visit] with each character's index and bracket depth, skipping regular expression literals. */
+    private inline fun scan(text: String, visit: (Int, Int) -> Unit) {
+        var depth = 0
         var inRegex = false
-        var start = 0
-        var i = 0
-        while (i < clause.length) {
-            val c = clause[i]
-            if (c == '/' && (inRegex || clause.substring(0, i).trimEnd().endsWith("=~"))) {
-                if (!inRegex || clause.getOrNull(i - 1) != '\\') inRegex = !inRegex
-            } else if (!inRegex && c == '&' && clause.getOrNull(i + 1) == '&') {
-                parts += clause.substring(start, i)
-                start = i + 2
-                i++
+        var previous = ' '
+        for (i in text.indices) {
+            val c = text[i]
+            when {
+                inRegex -> if (c == '/' && text[i - 1] != '\\') inRegex = false
+                c == '/' && previous == '~' -> inRegex = true
+                else -> {
+                    if (c == '(') depth++
+                    if (c == ')') depth--
+                    visit(i, depth)
+                }
             }
-            i++
+            if (!c.isWhitespace()) previous = c
         }
-        parts += clause.substring(start)
+    }
+
+    /** Splits on [operator] outside parentheses and regular expressions. */
+    private fun split(text: String, operator: String): List<String> {
+        val parts = mutableListOf<String>()
+        var start = 0
+        scan(text) { i, depth ->
+            if (depth == 0 && i >= start && text.startsWith(operator, i)) {
+                parts += text.substring(start, i)
+                start = i + operator.length
+            }
+        }
+        parts += text.substring(start)
         return parts
+    }
+
+    /** Removes the parentheses around a whole expression. */
+    private fun unwrap(expression: String): String {
+        var text = expression.trim()
+        while (text.startsWith("(") && text.endsWith(")")) {
+            var closesEarly = false
+            scan(text) { i, depth -> if (depth == 0 && i < text.length - 1) closesEarly = true }
+            if (closesEarly) break
+            text = text.substring(1, text.length - 1).trim()
+        }
+        return text
     }
 
     private fun term(term: String, context: Map<String, Any?>): Boolean {
         if (term == "true") return true
         if (term == "false") return false
-        Regex("^(\\w+)\\s*=~\\s*/(.*)/([a-z]*)$").find(term)?.let { m ->
+        REGEX_TERM.find(term)?.let { m ->
             val value = context[m.groupValues[1]]?.toString() ?: ""
-            val options = if ('i' in m.groupValues[3]) setOf(RegexOption.IGNORE_CASE) else emptySet()
-            return Regex(m.groupValues[2].replace("\\/", "/"), options).containsMatchIn(value)
+            val pattern = patterns.getOrPut("${m.groupValues[3]}/${m.groupValues[2]}") {
+                Regex(m.groupValues[2].replace("\\/", "/"), if ('i' in m.groupValues[3]) setOf(RegexOption.IGNORE_CASE) else emptySet())
+            }
+            return pattern.containsMatchIn(value)
         }
-        Regex("^(\\w+)\\s*(==|!=)\\s*'?([^']*)'?$").find(term)?.let { m ->
+        COMPARE_TERM.find(term)?.let { m ->
             val equal = (context[m.groupValues[1]]?.toString() ?: "") == m.groupValues[3].trim()
             return if (m.groupValues[2] == "==") equal else !equal
         }
@@ -252,12 +305,17 @@ object WhenClause {
         is String -> value.isNotEmpty()
         else -> true
     }
+
+    private val NEVER = setOf("false", "isDevelopment")
+    private val REGEX_TERM = Regex("^(\\w+)\\s*=~\\s*/(.*)/([a-z]*)$")
+    private val COMPARE_TERM = Regex("^(\\w+)\\s*(==|!=)\\s*'?([^']*)'?$")
 }
 
 /** Registers the actions at startup and tracks the last editor (for tools that read it). */
 class DevSnipStartup : ProjectActivity {
     override suspend fun execute(project: Project) {
         EditorTracker.install(project)
+        DevSnipActions.prepare()
         ApplicationManager.getApplication().invokeLater { DevSnipActions.registerOnce() }
     }
 }

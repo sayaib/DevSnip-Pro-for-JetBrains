@@ -71,7 +71,6 @@ class EngineState : PersistentStateComponent<EngineState.Data> {
         synchronized(this) {
             val values = values()
             if (value == null || value.isJsonNull) values.remove(key) else values.add(key, value.deepCopy())
-            data.globalStateJson = values.toString()
         }
         if (key == THEME_KEY) value?.takeIf { it.isJsonPrimitive }?.asString?.let { DevSnipUiState.getInstance().theme = it }
         DevSnipEngine.all().filter { it !== origin }.forEach { engine ->

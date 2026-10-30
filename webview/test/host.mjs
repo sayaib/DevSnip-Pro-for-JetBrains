@@ -139,6 +139,16 @@ await check("the workspace security audit finds the hard-coded secret", async ()
   assert.ok(JSON.stringify(posted).match(/password|secret|API_KEY|sk-live/i), "a finding about the secret");
 });
 
+await check("clicking a security finding selects its line and centers it", async () => {
+  const hub = [...ide.panels.values()].find(p => /Security/.test(p.title ?? ""));
+  const file = path.join(ws, "src", "app.js");
+  ide.panelMessage(hub.panel, { type: "openLocation", file: "src/app.js", line: 2, resource: `file://${file}` });
+  for (let i = 0; i < 60 && !ide.revealed; i++) await ide.settle(25);
+  assert.equal(ide.shown, file);
+  assert.equal(ide.shownSelection?.start?.line, 1, JSON.stringify(ide.shownSelection));
+  assert.equal(ide.revealed?.start?.line, 1, JSON.stringify(ide.revealed));
+});
+
 await check("the CSV viewer opens a file as a custom editor", async () => {
   ide.deliver({ type: "__openCustomEditor", viewType: "devsnip.csvViewer", path: path.join(ws, "data.csv"), panel: "custom-1" });
   await ide.settle(150);

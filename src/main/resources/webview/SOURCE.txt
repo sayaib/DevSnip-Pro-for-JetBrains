@@ -1,2 +1,2 @@
-Built from DevSnip Pro for VS Code 11.81.1 (/Users/sayaibsarkar/Documents/GitHub/DevSnip-Pro).
+Built from DevSnip Pro for VS Code 11.84.0 (/Users/sayaibsarkar/Documents/GitHub/DevSnip-Pro).
 Do not edit: run webview/build.mjs.

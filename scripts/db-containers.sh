@@ -5,7 +5,7 @@
 # Test-only passwords; the containers listen on 127.0.0.1 only.
 set -euo pipefail
 
-names=(devsnip-mysql devsnip-mariadb devsnip-sqlserver devsnip-oracle devsnip-clickhouse devsnip-redis)
+names=(devsnip-mysql devsnip-mariadb devsnip-sqlserver devsnip-oracle devsnip-clickhouse devsnip-redis devsnip-cockroach devsnip-postgres devsnip-postgres-tls)
 
 stop() {
   docker rm -f "${names[@]}" >/dev/null 2>&1 || true
@@ -28,6 +28,16 @@ start() {
   docker run -d --name devsnip-oracle -p 127.0.0.1:31521:1521 -e ORACLE_PASSWORD=devsnip gvenzl/oracle-free:23-slim >/dev/null
   docker run -d --name devsnip-clickhouse -p 127.0.0.1:38123:8123 -e CLICKHOUSE_PASSWORD=devsnip --ulimit nofile=262144:262144 clickhouse/clickhouse-server:24.8 >/dev/null
   docker run -d --name devsnip-redis -p 127.0.0.1:36379:6379 redis:7.4 redis-server --requirepass devsnip >/dev/null
+  docker run -d --name devsnip-postgres -p 127.0.0.1:35432:5432 -e POSTGRES_PASSWORD=devsnip -e POSTGRES_DB=app postgres:16 >/dev/null
+  # TLS only: the image's self-signed certificate, and a plain connection is refused by pg_hba below.
+  docker run -d --name devsnip-postgres-tls -p 127.0.0.1:35433:5432 -e POSTGRES_PASSWORD=devsnip -e POSTGRES_DB=app postgres:16 \
+    -c ssl=on -c ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem -c ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key >/dev/null
+  docker run -d --name devsnip-cockroach -p 127.0.0.1:36257:26257 cockroachdb/cockroach:v24.3.5 start-single-node --insecure >/dev/null
+  wait_for devsnip-cockroach "docker exec devsnip-cockroach ./cockroach sql --insecure -e 'CREATE DATABASE IF NOT EXISTS app'"
+  wait_for devsnip-postgres "docker exec devsnip-postgres pg_isready -U postgres -d app"
+  wait_for devsnip-postgres-tls "docker exec devsnip-postgres-tls pg_isready -U postgres -d app"
+  docker exec devsnip-postgres-tls sh -c "echo 'hostssl all all all scram-sha-256' > /var/lib/postgresql/data/pg_hba.conf; echo 'local all all trust' >> /var/lib/postgresql/data/pg_hba.conf"
+  docker exec devsnip-postgres-tls psql -U postgres -c 'SELECT pg_reload_conf()' >/dev/null
   wait_for devsnip-redis "docker exec devsnip-redis redis-cli -a devsnip ping | grep -q PONG"
   wait_for devsnip-clickhouse "curl -sf 'http://127.0.0.1:38123/ping'"
   wait_for devsnip-mysql "docker exec devsnip-mysql mysqladmin -uroot -pdevsnip ping --silent"

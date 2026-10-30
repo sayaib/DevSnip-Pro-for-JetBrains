@@ -10,6 +10,7 @@ import pro.devsnip.api.ide.engine.ExtensionFiles
 import pro.devsnip.api.ide.engine.VsCodeLanguages
 import pro.devsnip.api.ide.engine.VsCodeSnippets
 import pro.devsnip.api.ide.engine.WhenClause
+import pro.devsnip.api.ide.web.WebviewAssets
 import java.nio.file.Files
 import java.time.LocalDateTime
 
@@ -27,13 +28,49 @@ class EngineTest : BasePlatformTestCase() {
         assertFalse(WhenClause.holds("false", js))
     }
 
+    fun `test when clauses with parentheses and alternatives`() {
+        val folder = mapOf("explorerResourceIsFolder" to true, "resourceFilename" to "src")
+        val csv = mapOf("resourceExtname" to ".CSV", "explorerResourceIsFolder" to false)
+        assertTrue(WhenClause.holds("(explorerResourceIsFolder) && !isWeb && !devsnip.webHost", folder))
+        assertTrue(WhenClause.holds("(resourceExtname =~ /^\\.(csv|tsv|tab|xlsx|xlsm)$/i && !explorerResourceIsFolder) && !isWeb && !devsnip.webHost", csv))
+        assertFalse(WhenClause.holds("(resourceExtname =~ /^\\.(csv)$/i && !explorerResourceIsFolder) && !isWeb", folder))
+        assertTrue(WhenClause.holds("(resourceFilename =~ /^(a\\/b|.*[-_]x\\.txt|src)$/) && !isWeb", folder))
+        assertTrue(WhenClause.holds("explorerResourceIsFolder || editorHasSelection && missing", folder))
+        assertTrue(WhenClause.holds("!(editorHasSelection || missing) && explorerResourceIsFolder", folder))
+        assertFalse(WhenClause.holds("(a) && (b)", mapOf("a" to true)))
+        // Outer brackets that do not wrap the whole expression stay.
+        assertFalse(WhenClause.holds("(a) && (b)", mapOf("b" to true)))
+        assertTrue(WhenClause.neverHolds("(false) && !isWeb && !devsnip.webHost"))
+        assertTrue(WhenClause.neverHolds("isDevelopment && !isWeb"))
+        assertFalse(WhenClause.neverHolds("editorIsOpen"))
+        assertFalse(WhenClause.neverHolds("!isWeb && !devsnip.webHost"))
+        assertFalse(WhenClause.neverHolds(null))
+    }
+
+    fun `test every menu entry can be shown for the file it is meant for`() {
+        val project = mapOf<String, Any?>("explorerResourceIsFolder" to true)
+        val lock = mapOf<String, Any?>("resourceFilename" to "package-lock.json", "explorerResourceIsFolder" to false)
+        val sheet = mapOf<String, Any?>("resourceExtname" to ".csv", "resourceFilename" to "a.csv", "explorerResourceIsFolder" to false)
+        val entries = DevSnipActions.menu("explorer/context")
+        assertEquals(3, entries.size)
+        assertTrue(WhenClause.holds(entries[0].second, project))
+        assertTrue(WhenClause.holds(entries[1].second, lock))
+        assertTrue(WhenClause.holds(entries[2].second, sheet))
+        assertFalse(entries.any { WhenClause.holds(it.second, mapOf("resourceFilename" to "readme.md", "resourceExtname" to ".md")) })
+        val editor = DevSnipActions.menu("devsnip.editorContext").toMap()
+        val selection = mapOf<String, Any?>("editorHasSelection" to true, "editorLangId" to "javascript")
+        assertTrue(WhenClause.holds(editor[WebviewAssets.COMMAND_PREFIX + "createCustomSnippet"], selection))
+        assertTrue(WhenClause.holds(editor[WebviewAssets.COMMAND_PREFIX + "jwtDecoder"], selection))
+        assertFalse(WhenClause.holds(editor[WebviewAssets.COMMAND_PREFIX + "jwtDecoder"], mapOf("editorHasSelection" to false)))
+    }
+
     fun `test command titles lose their emoji and keep the DevSnip Pro prefix`() {
         assertEquals("DevSnip Pro: cURL Converter", DevSnipActions.cleanTitle("🔌 DevSnip Pro: cURL Converter", null))
         assertEquals("DevSnip Pro: Open in CSV & Excel Viewer", DevSnipActions.cleanTitle("Open in CSV & Excel Viewer", "DevSnip Pro"))
         val ids = DevSnipActions.commands.map { it.id }
         assertTrue(ids.size > 120)
         assertFalse("development-only commands are not offered", ids.any { it.endsWith("resetFeatureUsage") })
-        assertFalse("hidden aliases stay out of Find Action", ids.any { it.endsWith("webDevHub") })
+        assertFalse("hidden aliases stay out of Find Action", ids.any { it.endsWith("webDevHub") || it.endsWith("openInSpreadsheetViewer") })
         assertTrue(ids.any { it.endsWith("milestoneTracker") } && ids.any { it.endsWith("databaseClient") } && ids.any { it.endsWith("insertDebugLog") })
     }
 
@@ -91,6 +128,10 @@ class EngineTest : BasePlatformTestCase() {
             val mine = dir.resolve("custom/custom_javascript.json")
             Files.writeString(mine, "{\"log\":{\"prefix\":\"lg\",\"body\":[\"console.log($1)\"]}}")
             Files.writeString(dir.resolve("media/db-client.js"), "changed")
+            ExtensionFiles.unpack(dir)
+            assertEquals("the same plugin build does not unpack again", "changed", Files.readString(dir.resolve("media/db-client.js")))
+            // A new plugin build.
+            Files.delete(dir.resolve(".unpacked"))
             ExtensionFiles.unpack(dir)
             assertTrue(Files.readString(mine).contains("\"lg\""))
             assertFalse("the plugin's own files are refreshed", Files.readString(dir.resolve("media/db-client.js")) == "changed")
