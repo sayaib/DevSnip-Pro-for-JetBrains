@@ -199,8 +199,9 @@ object WebviewAssets {
      * page's own files and inline styles.
      */
     private fun assemble(html: String, storedTheme: String, surface: String, host: JsonObject, query: String, extraHead: String = "", scripts: List<String>, connect: String = "'none'"): String {
-        val themeId = pro.devsnip.api.ide.engine.DevSnipNative.liveTheme ?: storedTheme
-        val theme = themes.getAsJsonObject("blocks").getAsJsonObject(validTheme(themeId))[surface].asString.replace("__DEVSNIP_NONCE__", "devsnip")
+        val themeId = validTheme(pro.devsnip.api.ide.engine.DevSnipNative.liveTheme ?: storedTheme)
+        val block = themes.getAsJsonObject("blocks").getAsJsonObject(themeId)[surface].asString.replace("__DEVSNIP_NONCE__", "devsnip")
+        val theme = pro.devsnip.api.ide.engine.DevSnipNative.liveThemeMessage(themeId, surface)?.let { customized(block, it) } ?: block
         val csp = "default-src 'none'; style-src 'unsafe-inline' file:; script-src 'unsafe-inline' file:; font-src file: data:; img-src file: data: https:; connect-src $connect;"
         val head = "<style id=\"devsnip-ide-theme\" data-surface=\"$surface\">${IdeThemeCss.css(surface)}</style>$extraHead" +
             "<script>window.__devsnipHost=${embed(host)};window.__devsnipQuery=function(request){$query};</script>" +
@@ -211,6 +212,18 @@ object WebviewAssets {
             .replaceFirst("<head>", "<head>$head")
             .replaceFirst("</head>", "$theme</head>")
             .replaceFirst("<body>", "<body class=\"$bodyClass\" data-vscode-theme-kind=\"$bodyClass\">")
+    }
+
+    /** The theme block with the live message's rules and state (Theme Studio's customization) in place of the stock ones. */
+    private fun customized(block: String, message: JsonObject): String {
+        val rules = (message["rules"] as? JsonArray)?.joinToString("\n") { it.asString } ?: return block
+        val open = "<style id=\"devsnip-theme\" nonce=\"devsnip\">"
+        val start = block.indexOf(open)
+        val end = block.indexOf("</style>", start)
+        if (start < 0 || end < 0) return block
+        val state = JsonObject().apply { add("id", message["id"]); add("kind", message["kind"]) }
+        return (block.substring(0, start + open.length) + rules.replace("</", "<\\/") + block.substring(end))
+            .replaceFirst(Regex("var state = \\{[^}]*\\};"), Regex.escapeReplacement("var state = ${embed(state)};"))
     }
 
     private fun write(name: String, instance: String, html: String): Path {

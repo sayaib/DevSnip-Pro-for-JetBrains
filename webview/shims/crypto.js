@@ -483,6 +483,33 @@ export function sign(algorithm, data, keyOrOptions) {
   return Buffer.from(fromBinary(signature));
 }
 
+/** Node's streaming createSign / createVerify (update, then sign or verify), on the one-shot functions above. */
+function collect() {
+  const parts = [];
+  return { parts, update(data, encoding) { parts.push(typeof data === "string" ? Buffer.from(data, encoding || "utf8") : bytes(data)); return this; } };
+}
+
+export function createSign(algorithm) {
+  const state = collect();
+  return {
+    update(data, encoding) { state.update(data, encoding); return this; },
+    sign(key, outputEncoding) {
+      const signature = sign(algorithm, Buffer.concat(state.parts), key);
+      return outputEncoding ? signature.toString(outputEncoding) : signature;
+    }
+  };
+}
+
+export function createVerify(algorithm) {
+  const state = collect();
+  return {
+    update(data, encoding) { state.update(data, encoding); return this; },
+    verify(key, signature, signatureEncoding) {
+      return verify(algorithm, Buffer.concat(state.parts), key, typeof signature === "string" ? Buffer.from(signature, signatureEncoding || "base64") : signature);
+    }
+  };
+}
+
 export function verify(algorithm, data, keyOrOptions, signature) {
   const o = options(keyOrOptions);
   const key = keyFrom(o.key, "public");
@@ -614,6 +641,6 @@ export class X509Certificate {
 
 export default {
   createHash, createHmac, getHashes, randomBytes, randomUUID, randomInt, timingSafeEqual, constants,
-  KeyObject, createPrivateKey, createPublicKey, createSecretKey, sign, verify, X509Certificate,
+  KeyObject, createPrivateKey, createPublicKey, createSecretKey, sign, verify, createSign, createVerify, X509Certificate,
   webcrypto: globalThis.crypto
 };

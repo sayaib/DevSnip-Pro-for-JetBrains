@@ -163,4 +163,17 @@ execFile[promisify.custom] = (file, args, options) => new Promise((resolve, reje
   });
 });
 
-export default { spawn, execFile };
+/**
+ * exec runs a command line through a shell. The only caller is the AWS
+ * credential_process of a profile, and the IDE does not run shell command
+ * lines, so it fails the way a missing program does, with the reason.
+ */
+export function exec(command, options, callback) {
+  if (typeof options === "function") callback = options;
+  const error = new Error("The IDE does not run shell command lines such as credential_process. Use an access key, or a profile with SSO or static keys.");
+  error.code = "EACCES";
+  queueMicrotask(() => callback?.(error, "", ""));
+  return { pid: undefined, kill() { return false; }, on() { return this; } };
+}
+
+export default { spawn, execFile, exec };

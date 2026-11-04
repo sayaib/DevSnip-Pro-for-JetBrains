@@ -81,6 +81,15 @@ intellijPlatform {
         // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
+            <p><b>1.2.0</b>: up to date with DevSnip Pro for VS Code 11.88.0.</p>
+            <ul>
+              <li>Cloud databases: Amazon RDS, Aurora, DynamoDB and Redshift; Azure SQL, Cosmos DB and Azure Database for PostgreSQL and MySQL; Google Cloud SQL, Spanner, Firestore, BigQuery and AlloyDB, with IAM, Entra ID and gcloud sign-in</li>
+              <li>Faster large tables: counts once per filter, row estimates for big tables, server-side timeouts, and only visible rows drawn</li>
+              <li>Theme Studio: accent, background, corners, borders, shadows and fonts for every DevSnip Pro page; IDE Adaptive pairs a dark and a light theme with the IDE; five new themes</li>
+              <li>Code previews with line numbers and highlighting for about 40 languages; a cURL Converter with 17 targets; a rebuilt API Response Inspector</li>
+              <li>A Feedback button on the Milestones &amp; Points page</li>
+              <li>Fixed: large query results are no longer read into memory before being capped; idle extension hosts no longer collect messages; steadier page messaging and sidebar updates</li>
+            </ul>
             <p><b>1.1.0</b>: up to date with DevSnip Pro for VS Code 11.84.0.</p>
             <ul>
               <li>Tool hubs with a category explorer, recent tools, collapsible groups and a compact view; tools organised into subsections</li>
@@ -146,15 +155,20 @@ intellijPlatform {
             create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
             // The Marketplace also verifies against the current EAP.
             create(IntelliJPlatformType.IntellijIdeaUltimate, "263.7307.44")
-            // ./gradlew verifyPlugin -PverifyAllIdes also checks the other IDEs (about 10 GB of downloads).
-            if (providers.gradleProperty("verifyAllIdes").isPresent) {
-                create(IntelliJPlatformType.WebStorm, "2026.2.4")
-                create(IntelliJPlatformType.PyCharmProfessional, "2026.2.4")
-                create(IntelliJPlatformType.GoLand, "2026.2.4")
-                create(IntelliJPlatformType.PhpStorm, "2026.2.4")
-                create(IntelliJPlatformType.RubyMine, "2026.2.4")
-                create(IntelliJPlatformType.CLion, "2026.2.4.1")
-                create(IntelliJPlatformType.Rider, "2026.2.4")
+            // ./gradlew verifyPlugin -PverifyAllIdes also checks the other IDEs (about 10 GB of downloads);
+            // -PverifyAllIdes=WebStorm,PyCharmProfessional checks only those.
+            val others = providers.gradleProperty("verifyAllIdes").orNull
+            if (others != null) {
+                val chosen = others.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                listOf(
+                    IntelliJPlatformType.WebStorm to "2026.2.4",
+                    IntelliJPlatformType.PyCharmProfessional to "2026.2.4",
+                    IntelliJPlatformType.GoLand to "2026.2.4",
+                    IntelliJPlatformType.PhpStorm to "2026.2.4",
+                    IntelliJPlatformType.RubyMine to "2026.2.4",
+                    IntelliJPlatformType.CLion to "2026.2.4.1",
+                    IntelliJPlatformType.Rider to "2026.2.4",
+                ).filter { (type, _) -> chosen.isEmpty() || type.name in chosen }.forEach { (type, version) -> create(type, version) }
             }
         }
     }

@@ -148,14 +148,28 @@ object DevSnipNative {
         if (command.startsWith(PREFIX)) DevSnipUiState.getInstance().recordUsage(command)
     }
 
-    /** The theme the extension applies (a choice or a locked-theme preview): the IDE's own pages follow it. */
+    /**
+     * The theme the extension applies (a choice, a locked-theme preview, or the theme paired with
+     * the IDE's light or dark look): the IDE's own pages follow it.
+     */
     @Volatile
     var liveTheme: String? = null
         private set
 
-    fun themeApplied(id: String) {
-        if (id.isEmpty() || liveTheme == id) return
+    /** Its `devsnip:theme` message per surface, with Theme Studio's customization applied. */
+    @Volatile
+    private var liveMessages: JsonObject? = null
+
+    fun liveThemeMessage(themeId: String, surface: String): JsonObject? =
+        liveMessages?.takeIf { liveTheme == themeId }?.get(surface) as? JsonObject
+
+    /** `theme` is { id, messages: { panel, sidebar } } from the extension host. */
+    fun themeApplied(theme: JsonObject) {
+        val id = theme["id"]?.takeIf { it.isJsonPrimitive }?.asString.orEmpty()
+        val messages = theme["messages"] as? JsonObject
+        if (id.isEmpty() || (liveTheme == id && liveMessages == messages)) return
         liveTheme = id
+        liveMessages = messages
         DevSnipBrowser.OPEN.filter { it.native }.forEach { it.applyDevSnipTheme(id) }
     }
 

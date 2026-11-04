@@ -39,7 +39,7 @@ class DevSnipSelfTest : ProjectActivity {
 
     private fun <T> edt(block: () -> T): T {
         val future = CompletableFuture<T>()
-        ApplicationManager.getApplication().invokeLater { future.complete(runCatching(block).getOrElse { throw it }) }
+        ApplicationManager.getApplication().invokeLater { runCatching(block).fold(future::complete, future::completeExceptionally) }
         return future.get(60, TimeUnit.SECONDS)
     }
 
@@ -61,7 +61,7 @@ class DevSnipSelfTest : ProjectActivity {
             // premiumStatus is left out: it shows a modal dialog, as in VS Code.
             "advancedToolsHub", "milestoneTracker", "showSnippets", "readmeManager", "listAndRemoveConsoleLogs", "removeUnusedImports",
             "dependencyManager", "securityHub", "securityAudit", "cloudSecurityAudit", "dependencyAudit", "endpointSecurityScan",
-            "databaseClient", "getStarted", "whatsNew", "curlConverter", "osvScanner", "openGUI",
+            "databaseClient", "themeStudio", "getStarted", "whatsNew", "curlConverter", "osvScanner", "openGUI",
         ).map { WEB_PREFIX + it }
         for (command in commands) {
             val opened = System.nanoTime()

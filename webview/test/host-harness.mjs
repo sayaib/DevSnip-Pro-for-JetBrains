@@ -267,7 +267,7 @@ export function createIde(options = {}) {
       case "__panelTitle": if (ide.panels.get(message.panel)) ide.panels.get(message.panel).title = message.title; break;
       case "__panelDispose": ide.panels.delete(message.panel); break;
       case "__usage": ide.usage.push(message.command); break;
-      case "__theme": ide.theme = message.id; break;
+      case "__theme": ide.theme = message.id; ide.themeMessages = message.messages; break;
       case "__points": ide.points.push(message.balance); break;
       case "__execResult": ide.execResults.get(message.id)?.(message); break;
       case "__ledgerResult": ide.ledgerResults.get(message.id)?.(message); break;
@@ -301,7 +301,7 @@ export function createIde(options = {}) {
         workspaceState: ide.workspaceState,
         nativeCommands: native,
         machineId: "test-machine",
-        env: { PATH: process.env.PATH, HOME: os.homedir() },
+        env: { PATH: process.env.PATH, HOME: os.homedir(), ...options.env },
         telemetry: false
       },
       __devsnipToHost: onMessage,
@@ -336,6 +336,7 @@ export function createIde(options = {}) {
   });
 
   ide.panelMessage = (panel, message) => deliver({ type: "__panelMessage", panel, message });
+  ide.deliver = deliver;
   ide.panelByType = viewType => [...ide.panels.values()].find(p => p.viewType === viewType);
   ide.settle = (ms = 30) => new Promise(r => setTimeout(r, ms));
   ide.cleanup = () => fs.rmSync(root, { recursive: true, force: true });

@@ -34,8 +34,11 @@ class DevSnipBrowser(
 ) : Disposable {
     private val browser: JBCefBrowser = JBCefBrowser.createBuilder().build()
     private val query: JBCefJSQuery = JBCefJSQuery.create(browser as JBCefBrowserBase)
+    /** Messages for the page until it has loaded. Hosts post from background threads too, so it is guarded by itself. */
     private val queue = mutableListOf<String>()
+    @Volatile
     private var loaded = false
+    @Volatile
     private var disposed = false
     private var page: Path? = null
 
@@ -69,9 +72,10 @@ class DevSnipBrowser(
             override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
                 if (!frame.isMain) return
                 ApplicationManager.getApplication().invokeLater {
-                    loaded = true
-                    val pending = queue.toList()
-                    queue.clear()
+                    val pending = synchronized(queue) {
+                        loaded = true
+                        queue.toList().also { queue.clear() }
+                    }
                     pending.forEach(::execute)
                 }
             }
@@ -91,7 +95,7 @@ class DevSnipBrowser(
     }
 
     fun load(page: Path) {
-        loaded = false
+        synchronized(queue) { loaded = false }
         this.page?.takeIf { it != page }?.let(::deletePage)
         this.page = page
         browser.loadURL(page.toUri().toString())
@@ -104,7 +108,11 @@ class DevSnipBrowser(
     /** Delivers a message to the page, like `webview.postMessage`. */
     fun post(message: JsonElement) {
         val script = "window.__devsnipReceive && window.__devsnipReceive(${WebviewAssets.embed(message)});"
-        if (loaded) execute(script) else queue += script
+        val now = synchronized(queue) {
+            if (!loaded) queue += script
+            loaded
+        }
+        if (now) execute(script)
     }
 
     private fun execute(script: String) {
@@ -133,15 +141,15 @@ class DevSnipBrowser(
         )
     }
 
-    /** Applies a DevSnip theme to the page without reloading it. */
+    /** Applies a DevSnip theme to the page without reloading it (customized, when it is the extension's live theme). */
     fun applyDevSnipTheme(themeId: String) {
-        post(WebviewAssets.themeMessage(themeId, surface))
+        post(pro.devsnip.api.ide.engine.DevSnipNative.liveThemeMessage(themeId, surface) ?: WebviewAssets.themeMessage(themeId, surface))
     }
 
     override fun dispose() {
         disposed = true
         OPEN.remove(this)
-        queue.clear()
+        synchronized(queue) { queue.clear() }
         page?.let(::deletePage)
     }
 

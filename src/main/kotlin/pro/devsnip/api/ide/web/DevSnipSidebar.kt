@@ -75,7 +75,15 @@ class DevSnipThemeListener : LafManagerListener, EditorColorsListener {
     override fun globalSchemeChange(scheme: com.intellij.openapi.editor.colors.EditorColorsScheme?) = refresh()
 
     private fun refresh() {
-        ApplicationManager.getApplication().invokeLater { DevSnipBrowser.broadcast { it.refreshIdeTheme() } }
+        ApplicationManager.getApplication().invokeLater {
+            DevSnipBrowser.broadcast { it.refreshIdeTheme() }
+            // IDE Adaptive's light/dark pairing follows the IDE theme.
+            val kind = if (com.intellij.ui.JBColor.isBright()) "light" else "dark"
+            // Only to running hosts: one that has not started reads the IDE's look when it does.
+            pro.devsnip.api.ide.engine.DevSnipEngine.all().filter { it.status == pro.devsnip.api.ide.engine.DevSnipEngine.Status.STARTING || it.status == pro.devsnip.api.ide.engine.DevSnipEngine.Status.READY }.forEach { engine ->
+                engine.post(JsonObject().apply { addProperty("type", "__colorTheme"); addProperty("kind", kind) })
+            }
+        }
     }
 }
 

@@ -16,6 +16,14 @@ import java.time.LocalDateTime
 
 /** The IDE side of the extension host: menus, snippets, languages, settings, files and pages. */
 class EngineTest : BasePlatformTestCase() {
+    fun `test an extension host that is not running keeps no messages`() {
+        val engine = pro.devsnip.api.ide.engine.DevSnipEngine.getInstance(project)
+        assertEquals(pro.devsnip.api.ide.engine.DevSnipEngine.Status.IDLE, engine.status)
+        // What other projects' hosts broadcast (points, settings): a host that starts later reads them fresh.
+        repeat(1000) { engine.post(com.google.gson.JsonObject().apply { addProperty("type", "__globalState"); addProperty("key", "k$it") }) }
+        assertEquals(0, engine.queuedMessages)
+    }
+
     fun `test when clauses from package json`() {
         val js = mapOf("editorLangId" to "javascript", "editorHasSelection" to false, "resourceFilename" to "package.json", "explorerResourceIsFolder" to false)
         assertTrue(WhenClause.holds("editorLangId =~ /^(javascript|typescript)$/", js))

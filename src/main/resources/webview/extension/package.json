@@ -2,7 +2,7 @@
   "name": "hue-console",
   "displayName": "DevSnip Pro: API & Database Client, AI & Developer Toolkit",
   "description": "Free REST API client for VS Code, no account needed: send HTTP and GraphQL requests with environments, collections and cURL import. Plus a database client for PostgreSQL, MySQL, SQL Server, Oracle, MongoDB, Redis and more, LLM token and cost tools, and a secret scanner.",
-  "version": "11.84.0",
+  "version": "11.88.0",
   "license": "MIT",
   "author": "Sayaib Sarkar",
   "publisher": "sayaib",
@@ -290,6 +290,11 @@
         "title": "🚀 DevSnip Pro: Get Started"
       },
       {
+        "command": "sayaib.hue-console.checkForUpdates",
+        "title": "🔄 DevSnip Pro: Check for Updates",
+        "enablement": "!isWeb && !devsnip.webHost"
+      },
+      {
         "command": "sayaib.hue-console.advancedToolsHub",
         "title": "🧭 DevSnip Pro: Browse All Tools"
       },
@@ -320,6 +325,10 @@
       {
         "command": "sayaib.hue-console.chooseTheme",
         "title": "🎨 DevSnip Pro: Choose Theme"
+      },
+      {
+        "command": "sayaib.hue-console.themeStudio",
+        "title": "🎨 DevSnip Pro: Theme Studio (Customize Appearance)"
       },
       {
         "command": "sayaib.hue-console.searchTools",
@@ -979,6 +988,38 @@
           "default": false,
           "markdownDescription": "Log every analytics event, exactly as sent, to the **DevSnip Pro: Analytics** output channel."
         },
+        "devsnip.updates.notifications": {
+          "type": "boolean",
+          "default": true,
+          "tags": [
+            "usesOnlineServices"
+          ],
+          "markdownDescription": "Show available updates in the DevSnip Pro Tools sidebar and status bar. The sidebar alert appears immediately after detection, including when VS Code auto-update is enabled. Snoozed and skipped releases stay hidden. With extensions.autoCheckUpdates off, automatic checks are disabled. DevSnip Pro: Check for Updates always works."
+        },
+        "devsnip.updates.checkFrequency": {
+          "type": "string",
+          "enum": [
+            "hourly",
+            "daily",
+            "weekly",
+            "manual"
+          ],
+          "enumDescriptions": [
+            "Check once an hour while VS Code is open.",
+            "Check at most once a day, in the background after startup.",
+            "Check at most once a week.",
+            "Never check automatically; run **DevSnip Pro: Check for Updates** instead."
+          ],
+          "default": "hourly",
+          "markdownDescription": "How often DevSnip Pro checks for updates while VS Code is open. An automatic check also runs after startup. Manual mode disables automatic checks."
+        },
+        "devsnip.updates.remindLaterHours": {
+          "type": "number",
+          "default": 24,
+          "minimum": 1,
+          "maximum": 720,
+          "markdownDescription": "How many hours **Remind Me Later** hides the update status bar item for."
+        },
         "devsnip.rewards.notifications": {
           "type": "string",
           "enum": [
@@ -1387,6 +1428,10 @@
         {
           "command": "sayaib.hue-console.schemaDiff",
           "when": "false"
+        },
+        {
+          "command": "sayaib.hue-console.checkForUpdates",
+          "when": "!isWeb && !devsnip.webHost"
         }
       ]
     },
@@ -1457,12 +1502,13 @@
           {
             "id": "theme",
             "title": "Make it yours",
-            "description": "Preview twelve appearance themes for every DevSnip Pro panel, from Dracula to Aurora, and unlock them with the points you earn.\n[Choose a theme](command:sayaib.hue-console.chooseTheme)",
+            "description": "Preview 17 appearance themes for every DevSnip Pro panel, from GitHub Dark to Purple Gradient, follow VS Code light and dark, and fine-tune accent, corners and fonts in Theme Studio.\n[Choose a theme](command:sayaib.hue-console.chooseTheme)\n[Open Theme Studio](command:sayaib.hue-console.themeStudio)",
             "media": {
               "markdown": "media/walkthrough/theme.md"
             },
             "completionEvents": [
-              "onCommand:sayaib.hue-console.chooseTheme"
+              "onCommand:sayaib.hue-console.chooseTheme",
+              "onCommand:sayaib.hue-console.themeStudio"
             ]
           },
           {
@@ -1494,7 +1540,7 @@
     "test": "node ./out/test/runTest.js",
     "test:unit": "node ./out/test/unit/run-unit-tests.js",
     "package": "vsce package",
-    "vscode:prepublish": "node scripts/write-analytics-config.js && npm run compile",
+    "vscode:prepublish": "node scripts/write-analytics-config.js && node scripts/write-feedback-config.js && npm run compile",
     "compile:web": "node scripts/build-web.js",
     "test:web:smoke": "node scripts/test-web-smoke.js",
     "test:web": "npm run compile && node scripts/run-web-tests.js",

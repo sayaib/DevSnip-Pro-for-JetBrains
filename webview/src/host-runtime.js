@@ -24,7 +24,8 @@ import { setSnippetBackupFolder, syncSnippetBackups } from "@devsnip/utils/snipp
 import { registerHubCommands } from "@devsnip/commands/hubCommands";
 import { registerDatabaseClientCommand } from "@devsnip/database/command";
 import { registerSpreadsheetViewer } from "@devsnip/spreadsheet/command";
-import { initThemes, registerThemeCommand, setThemeAccess, onDidChangeTheme, onDidChangeLockedPreview, currentThemeId } from "@devsnip/theme/service";
+import { initThemes, registerThemeCommand, setThemeAccess, onDidChangeTheme, onDidChangeLockedPreview, onDidChangeAppearance, effectiveThemeId, currentCustomization } from "@devsnip/theme/service";
+import { themeMessage } from "@devsnip/theme/inject";
 import { registerMilestoneTrackerCommand, setTreeRefreshCallback, setMilestoneContext, autoRecordToolUsage, redeemPoints, refundPoints, getPointsBalance, recordDiscovery, getUserStats, themeLockFor, buyReward, grantKeptTheme, onDidChangePoints } from "@devsnip/commands/milestoneTracker";
 import { registerLazyCommands, registerTrackedCommand, setCommandObserver, setUsageRecorder, COMMAND_PREFIX } from "@devsnip/utils/command-registry";
 import { classifyInstall, initAnalytics, snapshotInstall, trackCommand } from "@devsnip/analytics";
@@ -292,14 +293,21 @@ function activate() {
     }
   }
 
-  // Native pages (tools, REST client, scanners) follow the theme in use, including a locked-theme preview.
-  const themeChanged = () => toHost({ type: "__theme", id: currentThemeId() });
+  // Native pages (tools, REST client, scanners) follow the theme in use, including a locked-theme
+  // preview, the IDE light/dark pairing and Theme Studio's customization: the IDE gets the rules to apply.
+  const liveTheme = () => {
+    const id = effectiveThemeId();
+    const custom = currentCustomization();
+    return { id, messages: { panel: themeMessage(id, "panel", custom), sidebar: themeMessage(id, "sidebar", custom) } };
+  };
+  const themeChanged = () => toHost({ type: "__theme", ...liveTheme() });
   onDidChangeTheme(themeChanged);
   onDidChangeLockedPreview(themeChanged);
+  onDidChangeAppearance(themeChanged);
   onDidChangePoints(balance => toHost({ type: "__points", balance }));
 
   initAnalytics(context, installSnapshot);
-  toHost({ type: "__ready", commands: registeredCommands(), failed, theme: currentThemeId(), points: getPointsBalance(context) });
+  toHost({ type: "__ready", commands: registeredCommands(), failed, theme: liveTheme(), points: getPointsBalance(context) });
 }
 
 /** The points ledger, for the REST API Client page (its premium features cost points, as in VS Code). */

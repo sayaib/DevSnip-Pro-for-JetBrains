@@ -396,10 +396,11 @@ class EngineHost(private val project: Project, private val engine: DevSnipEngine
             args = parts.drop(1)
         }
         val name = File(command).name.lowercase().removeSuffix(".exe").removeSuffix(".cmd").removeSuffix(".bat").removeSuffix(".ps1")
-        if (name !in ALLOWED_PROGRAMS) throw CodedException("DevSnip Pro only runs package managers, build tools and Node ($name is not one).", "EACCES")
+        if (name !in ALLOWED_PROGRAMS && name !in CLOUD_CLIS) throw CodedException("DevSnip Pro only runs package managers, build tools, Node and the AWS, Azure and Google Cloud CLIs ($name is not one).", "EACCES")
         val root = workspaceRoot
-        val cwd = p.str("cwd").takeIf { it.isNotEmpty() }?.let(::pathOf) ?: root ?: ScannerHost.HOME
-        if (name !in CHECK_PROGRAMS) {
+        // The cloud CLIs only hand the Database Client a token for the user's own account, so they run in the home folder.
+        val cwd = if (name in CLOUD_CLIS) ScannerHost.HOME else p.str("cwd").takeIf { it.isNotEmpty() }?.let(::pathOf) ?: root ?: ScannerHost.HOME
+        if (name !in CHECK_PROGRAMS && name !in CLOUD_CLIS) {
             if (!ProjectTrust.isTrusted(project)) throw CodedException("Trust this project to let DevSnip Pro run $name in it.", "EACCES")
             if (root == null || !under(cwd, root)) throw CodedException("Commands run in the project's folders only.", "EACCES")
         }
@@ -635,6 +636,13 @@ class EngineHost(private val project: Project, private val engine: DevSnipEngine
             "npm", "npx", "pnpm", "yarn", "bun", "node", "pip", "pip3", "python", "python3", "py", "uv", "poetry", "pipenv",
             "mvn", "mvnw", "gradle", "gradlew", "dotnet", "flutter", "dart", "composer", "which", "where",
         )
+
+        /**
+         * The cloud CLIs the Database Client asks for credentials (aws configure export-credentials,
+         * az account get-access-token, gcloud auth print-access-token). They change nothing in the
+         * project, so they also run in untrusted projects and in windows without a project folder.
+         */
+        val CLOUD_CLIS = setOf("aws", "az", "gcloud")
 
         /** Lookups that change nothing (which / where) also run in untrusted projects. */
         private val CHECK_PROGRAMS = setOf("which", "where")

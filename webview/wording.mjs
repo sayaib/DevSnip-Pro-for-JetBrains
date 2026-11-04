@@ -22,7 +22,8 @@ export const WORDING = [
   ["through VS Code SecretStorage", "through the IDE password safe"],
   ["It is kept in VS Code's secret storage", "It is kept in the IDE password safe"],
   // Where things run.
-  ["Queries run inside VS Code, so", "Queries run inside the IDE, so"],
+  ["Queries run on a worker thread, so a long one never freezes VS Code and can be cancelled. On VS Code builds without node:sqlite, sql.js opens files up to 512 MB and cannot cancel.", "Queries run with sql.js, which opens files up to 512 MB and cannot cancel a running query.", "types.ts"],
+  ["from VS Code's environment, else", "from the environment the IDE was started from, else", "db-client.js"],
   ["never leave VS Code", "never leave the IDE"],
   ["so VS Code stays responsive", "so the IDE stays responsive"],
   ["locally in VS Code unless", "locally in the IDE unless"],
@@ -31,8 +32,36 @@ export const WORDING = [
   // Themes: System Default follows the IDE's theme.
   ["Follows your VS Code color theme", "Follows your IDE color theme"],
   ["\"VS Code theme\"", "\"IDE theme\"", "service.ts"],
+  // Theme Studio: VS Code Adaptive is IDE Adaptive, and pairs DevSnip themes with the IDE's light and dark themes.
+  ["VS Code Adaptive keeps VS Code's.", "IDE Adaptive keeps the IDE's.", "theme-studio.js"],
+  ["VS Code Adaptive", "IDE Adaptive"],
+  ["shortLabel: \"VS Code\"", "shortLabel: \"IDE\"", "service.ts"],
+  ["to follow VS Code.", "to follow the IDE.", "service.ts"],
+  ["pairing them with VS Code.", "pairing them with the IDE.", "service.ts"],
+  ["{ label: \"VS Code\", value: \"\" }", "{ label: \"IDE\", value: \"\" }", "custom.ts"],
+  ["{ label: \"VS Code editor\", value: \"\" }", "{ label: \"IDE editor\", value: \"\" }", "custom.ts"],
+  [" to match VS Code\"", " to match the IDE\"", "theme-studio.js"],
+  ["\"VS Code is \"", "\"The IDE is \"", "theme-studio.js"],
+  ["pair them with VS Code", "pair them with the IDE", "theme-studio.js"],
+  ["now follows VS Code light and dark", "now follows the IDE light and dark", "theme-studio.js"],
+  ["Follow VS Code", "Follow the IDE"],
+  ["Match VS Code light and dark", "Match the IDE light and dark", "studio-page.ts"],
+  ["while VS Code is dark and another while it is light. High-contrast VS Code themes", "while the IDE is dark and another while it is light. High-contrast IDE themes", "studio-page.ts"],
+  ["While VS Code is dark", "While the IDE is dark", "studio-page.ts"],
+  ["While VS Code is light", "While the IDE is light", "studio-page.ts"],
+  ["Leave a font on VS Code to keep your editor settings.", "Leave a font on IDE to keep your editor settings.", "studio-page.ts"],
+  ["with VS Code's light/dark switch", "with the IDE's light/dark switch", "activation.ts"],
+  ["and VS Code light/dark pairing", "and IDE light/dark pairing", "tools-sidebar.js"],
+  ["follows your VS Code theme (light, dark or high contrast)", "follows your IDE theme (light, dark or high contrast)", "theme.md"],
+  ["while VS Code is dark and another while it is light.", "while the IDE is dark and another while it is light.", "theme.md"],
+  ["or keep VS Code's.", "or keep the IDE's.", "theme.md"],
+  // Feedback names the IDE's version.
+  ["DevSnip Pro version, VS Code version, and operating system.", "DevSnip Pro version, IDE version, and operating system.", "milestone-tracker.js"],
   // The scanners' User-Agent names the host.
   ["(VS Code ${", "(JetBrains IDE ${"],
+  // SQLite: the IDE's extension host has no node:sqlite, so sql.js opens files of up to 512 MB.
+  ["This SQLite file is too large to open without node:sqlite", "This SQLite file is too large for the IDE to open", "sqlite.ts"],
+  ["Update VS Code: versions with Node 22.5 or later read SQLite files of any size in place.", "Open a smaller copy, or query the file with the sqlite3 command-line tool.", "sqlite.ts"],
   // Places in the window.
   ["file in the Explorer and choose ", "file in the Project view and choose "],
   ["For CSV files use \", h(\"b\", null, \"Open With…\"), \" or the table button in the editor title bar.", "For CSV files use the \", h(\"b\", null, \"Table\"), \" tab at the bottom of the editor."],

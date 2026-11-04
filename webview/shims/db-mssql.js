@@ -90,13 +90,16 @@ export class ConnectionPool extends EventEmitter {
   connect() {
     const c = this.config;
     const options = c.options || {};
+    // Microsoft Entra ID (Azure SQL): the Azure CLI's access token signs in instead of a user and password.
+    const accessToken = c.authentication?.type === "azure-active-directory-access-token" ? String(c.authentication.options?.token ?? "") : "";
     this.opened ??= rpc("db.connect", {
       kind: "sqlserver",
       host: c.server || "localhost",
       port: c.port ?? null,
       instanceName: options.instanceName || "",
-      user: c.user || "",
-      password: c.password || "",
+      user: accessToken ? "" : c.user || "",
+      password: accessToken ? "" : c.password || "",
+      accessToken,
       database: c.database || "",
       ssl: options.encrypt ? {} : null,
       trustServerCertificate: options.trustServerCertificate !== false,

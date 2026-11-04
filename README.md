@@ -7,7 +7,7 @@ It brings the full [DevSnip Pro VS Code extension](https://github.com/sayaib/Dev
 to JetBrains IDEs, with the same look, the same Tools sidebar and the same results:
 
 - a REST, GraphQL and WebSocket client
-- a database client for ten databases
+- a database client for ten databases and 18 cloud database services
 - vulnerability and dependency scanners
 - a CSV & Excel editor
 - snippets in code completion
@@ -106,7 +106,18 @@ environment variables and OAuth tokens are kept in the IDE password safe.
 ### Database Client
 
 Supported databases: **PostgreSQL, CockroachDB, MySQL, MariaDB, SQL Server, Oracle, SQLite,
-ClickHouse, MongoDB and Redis**.
+ClickHouse, MongoDB and Redis**, and these cloud services, grouped by provider:
+
+- **AWS**: Amazon RDS (PostgreSQL, MySQL, MariaDB, SQL Server, Oracle), Aurora, DynamoDB and
+  Redshift.
+- **Azure**: Azure SQL Database, Cosmos DB (NoSQL and MongoDB APIs), and Azure Database for
+  PostgreSQL and MySQL.
+- **Google Cloud**: Cloud SQL, Cloud Spanner, Firestore, BigQuery and AlloyDB.
+
+Cloud connections sign in with a password or key, IAM database authentication (RDS, Aurora,
+Cloud SQL), Microsoft Entra ID through the Azure CLI, an AWS profile, gcloud Application
+Default Credentials, or a service account key. Point a connection at a local emulator with
+an endpoint.
 
 - An explorer of schemas, tables and collections.
 - A grid where rows can be edited.
@@ -114,8 +125,10 @@ ClickHouse, MongoDB and Redis**.
 - A connection store. Paste a connection string to connect; passwords go to the IDE
   password safe.
 
-The drivers are bundled: JDBC, the MongoDB Java driver and Jedis. SQLite runs inside the
-IDE. The toolkit's SQL Formatter & Linter, SQL Query Helper, Database Connection Strings and
+The drivers are bundled: JDBC, the MongoDB Java driver and Jedis. DynamoDB, Cosmos DB,
+Spanner, Firestore and BigQuery are reached over their REST APIs through the IDE's HTTP
+client. SQLite runs inside the IDE (files up to 512 MB). Large tables show the database's row estimate, with **Count rows** for the exact
+number. The toolkit's SQL Formatter & Linter, SQL Query Helper, Database Connection Strings and
 SQL → MongoDB Query tools sit in the same sidebar section.
 
 ### Security scanners
@@ -208,12 +221,19 @@ They run locally and do not call the network.
   shows your progress.
 - **Premium features**: some advanced features of the REST client cost points, which are
   refunded if the feature fails. **Points & Premium Features** lists them.
-- **Themes**: *System Default* follows your IDE theme, light or dark, and changes with it.
-  The 12 DevSnip themes are Dark, Midnight, Dracula, Monokai, Nord, Cyberpunk, Solarized,
-  Ember, Synthwave, Aurora, Light and High Contrast. They restyle every DevSnip page at once
-  and unlock with points. Choose one with **Choose Theme** or the sidebar's theme button.
+- **Themes**: *IDE Adaptive* follows your IDE theme, light or dark, and changes with it.
+  The 17 DevSnip themes are Modern Dark, GitHub Dark, AMOLED Black, Midnight Blue, Ocean
+  Blue, Dracula, Monokai, Nord, Cyberpunk Neon, Purple Gradient, Solarized, Ember, Synthwave,
+  Aurora, Clean Light, GitHub Light and High Contrast. They restyle every DevSnip page at
+  once and unlock with points. Choose one with **Choose Theme** or the sidebar's theme button.
+- **Theme Studio** (**Customize…** in the theme picker): accent and background colours with
+  contrast checks, corners, borders, shadows, interface and code fonts, and the theme fade.
+  Under IDE Adaptive it can pair a dark and a light DevSnip theme with the IDE's light and
+  dark themes.
 
-Points are kept locally in the IDE. There is no payment and no server.
+Points are kept locally in the IDE. There is no payment and no server. The **Feedback**
+button on the Milestones & Points page sends a bug report or suggestion, only when you press
+Send.
 
 ## Where to find everything
 
@@ -250,6 +270,9 @@ All settings are optional.
   - the scanners' lookups: package names and versions to OSV.dev, package registries and
     Maven Central, and CVE ids to NVD
   - the endpoint scan of the URL you enter
+  - the cloud databases you connect to, and their sign-in endpoints
+  - a feedback message, when you press Send: the type, title, message, the email you
+    enter (optional), and the plugin version, IDE version and operating system
   - anonymous usage statistics, only if you turn them on
 - **Password safe.** Database passwords, secret-looking environment variables (`token`,
   `secret`, `password`, `key`, `auth`, `cookie`, `session`, …), OAuth tokens and the NVD key
@@ -263,7 +286,8 @@ All settings are optional.
 - **Files and processes.**
   - Files: the plugin's pages read and write only the project, the plugin's own storage and
     files you pick.
-  - Processes: only package managers, build tools and Node, and only in trusted projects.
+  - Processes: only package managers, build tools and Node, and only in trusted projects;
+    plus `aws`, `az` and `gcloud`, run with fixed arguments to get a cloud database token.
   - Terminal commands from the scanners run only after you confirm them.
 - **Logs.** The logs contain only method, redacted URL, status and timing; no headers,
   bodies or credentials.
@@ -327,7 +351,7 @@ against, about 1 GB on the first build. No environment variables are needed.
 ./gradlew buildPlugin
 ```
 
-The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.1.0.zip`.
+The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.2.0.zip`.
 
 ```bash
 ./gradlew runIde
@@ -358,6 +382,7 @@ VS Code's UI, such as "Command Palette" → "Find Action".
 | `DEVSNIP_SELFTEST=/path/to/project ./gradlew runIde` | A self-check in a real IDE: the main pages, the sidebar, the CSV viewer and Insert Debug Log. It writes `DEVSNIP-SELFTEST` lines to the sandbox `idea.log` |
 | `scripts/smoke-test-zip.sh <IDE Contents folder> <project>` | The same self-check with the release ZIP installed into a fresh IDE configuration. The project needs a `README.md`, a `data.csv` and a `src/app.js` |
 | `./gradlew verifyPlugin` | Plugin Verifier against IDEA 2024.1.7, 2026.2.3 and the 2026.3 EAP |
+| `./gradlew verifyPlugin -PverifyAllIdes` | Also WebStorm, PyCharm, GoLand, PhpStorm, RubyMine, CLion and Rider 2026.2 (about 10 GB of downloads); `-PverifyAllIdes=WebStorm,PyCharmProfessional` checks only those |
 
 All automated tests use local servers on `127.0.0.1`. No production or third-party API is
 contacted.
@@ -365,7 +390,7 @@ contacted.
 ## Publishing
 
 The current release checklist, with its test results and measurements, is in
-[docs/RELEASE-1.1.0.md](docs/RELEASE-1.1.0.md).
+[docs/RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md).
 
 1. **Signing key (one time).** Create a certificate as described in
    [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html), and
@@ -379,7 +404,7 @@ The current release checklist, with its test results and measurements, is in
    ./gradlew signPlugin
    ```
 
-   Upload `build/distributions/devsnip-pro-jetbrains-1.1.0-signed.zip` at
+   Upload `build/distributions/devsnip-pro-jetbrains-1.2.0-signed.zip` at
    [plugins.jetbrains.com](https://plugins.jetbrains.com) (your profile → **Add new
    plugin**), with the MIT licence and the source URL. JetBrains reviews new plugins
    before listing them.

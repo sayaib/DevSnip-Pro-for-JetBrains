@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.2.0] - 2026-11-04
+
+Up to date with DevSnip Pro for VS Code 11.88.0: cloud databases, Theme Studio and five new themes, a rebuilt cURL Converter and API Response Inspector, new code previews, and a Feedback form. See docs/RELEASE-1.2.0.md for the tests.
+
+### Added
+- **Cloud databases** in the Database Client, grouped by provider. AWS: RDS (PostgreSQL, MySQL, MariaDB, SQL Server, Oracle), Aurora, DynamoDB and Redshift. Azure: Azure SQL Database, Cosmos DB (NoSQL and MongoDB APIs), Azure Database for PostgreSQL and MySQL. Google Cloud: Cloud SQL, Cloud Spanner, Firestore, BigQuery and AlloyDB. DynamoDB, Cosmos DB, Spanner, Firestore and BigQuery are reached over their REST APIs through the IDE's HTTP client, so the IDE's proxy settings apply.
+- **Cloud sign-in**: passwords and keys, IAM database authentication (RDS, Aurora, Cloud SQL), Microsoft Entra ID through the Azure CLI (Azure SQL signs in with the token), AWS profiles, gcloud Application Default Credentials, service account keys and key files. Keys go to the IDE password safe.
+- **Large tables**: each filter is counted once, unfiltered tables of a million rows or more show the database's estimate with **Count rows**, MySQL and MariaDB queries stop on the server after 30 seconds, Redis commands that read whole collections are checked first, and big pages draw only the visible rows.
+- **Theme Studio** (*DevSnip Pro: Theme Studio*, or **Customize…** in the sidebar's theme picker): accent and background colours with contrast checks, corners, borders, shadows, interface and code fonts, and the theme fade. Changes apply at once to every DevSnip Pro page, the IDE's own tool, REST client and scanner tabs included.
+- **IDE Adaptive** (was System Default) can pair a dark and a light DevSnip theme and switches between them when the IDE changes between light and dark.
+- **Five themes**: GitHub Dark, GitHub Light, AMOLED Black, Ocean Blue and Purple Gradient. Dark, Light, Midnight and Cyberpunk are now Modern Dark, Clean Light, Midnight Blue and Cyberpunk Neon; saved choices and unlocks carry over.
+- **Code previews** in every toolkit tool: line numbers, file name and language, highlighting for about 40 languages, Wrap, and Expand / Collapse for long outputs.
+- **cURL Converter**: 17 targets, Bash/zsh, cmd and PowerShell dialects, batch conversion, Postman and HAR exports, and credential redaction.
+- **API Response Inspector**: raw HTTP, HAR, JSON, NDJSON and SSE captures, JSON Pointer, comparisons, diagnostics, and exports (reports, TypeScript types, JSON Schema, test assertions).
+- **React / Next.js Generator** rebuilt on the extension's new generator.
+- **Feedback** button on the Milestones & Points page (bug report, feature request or feedback). It is sent only when you press Send.
+
+### Changed
+- SQLite files over 512 MB are refused with a message instead of running out of memory. The IDE has no `node:sqlite`, so SQLite stays on sql.js; the extension's worker thread, 30-second timeout and query cancelling for SQLite are VS Code-only.
+- The plugin runs the AWS, Azure and Google Cloud CLIs (`aws`, `az`, `gcloud`) when a connection asks them for a token, in addition to package managers, build tools and Node.
+
+### Fixed
+- Database Client: a capped query (the console's first rows) now stops on the server at the cap instead of the driver reading the whole result into the IDE's memory first. Measured on PostgreSQL: the first 10 of 3,000,000 rows in about 170 ms instead of about 880 ms.
+- An extension host that is not running (never started in a project, or stopped) no longer collects messages: other projects broadcast state changes such as points to every project, and those queued for the whole session.
+- Pages: messages posted from background threads (scanner process output) and the page finishing loading no longer race for the same queue.
+- The Tools sidebar is told it was shown or hidden only when that changes, not on every tool window event in the project.
+- The self-check (`-Ddevsnip.selfTest`) reports an error on the UI thread at once instead of waiting 60 seconds.
+
+### Not ported
+- The extension's update notifications and *Check for Updates*: the IDE updates its plugins itself (*Settings | Plugins*).
+- An AWS profile's `credential_process`: the IDE does not run shell command lines. Use access keys, SSO or static keys in the profile.
+
 ## [1.1.0] - 2026-10-30
 
 Up to date with DevSnip Pro for VS Code 11.84.0, more dependable menus, and less work on the UI thread. See docs/RELEASE-1.1.0.md for the tests and measurements.

@@ -867,6 +867,11 @@
     themePanel.innerHTML = "";
     const head = el("div", "theme-head");
     head.appendChild(el("b", "", "Appearance"));
+    const studio = el("button", "link", "Customize…");
+    studio.type = "button";
+    studio.title = "Open Theme Studio: accent, background, corners, fonts and IDE light/dark pairing";
+    studio.addEventListener("click", () => { closeThemePanel(false); vscode.postMessage({ type: "openThemeStudio" }); });
+    head.appendChild(studio);
     themePanel.appendChild(head);
     themeChoices.forEach(choice => {
       const option = el("button", "theme-opt");
@@ -1095,15 +1100,25 @@
 
   renderOnboarding();
 
+  $("updateNow").addEventListener("click", () => vscode.postMessage({ type: "installUpdate" }));
   /* ------------------------------------------------------------ messages */
   window.addEventListener("message", event => {
     const message = event.data || {};
+    if (message.type === "update") {
+      $("updateAlert").hidden = !message.update;
+      const preview = Boolean(message.update && message.update.preview);
+      $("updateVersion").textContent = preview ? "Development preview — this is how a new update will appear." : message.update ? "DevSnip Pro " + message.update.version + " is available." : "";
+      $("updateNow").disabled = preview;
+      $("updateNow").textContent = preview ? "Preview only" : "Update now";
+    }
     if (message.type === "onboarding" && message.onboarding) {
       onboarding = message.onboarding;
       renderOnboarding();
     }
-    if (message.type === "devsnip:theme" && typeof message.id === "string" && (message.id !== currentTheme || Boolean(message.lockedPreview) !== themePreviewing)) {
-      currentTheme = message.id;
+    // `chosen` is the picked theme; `id` is the one drawn, which differs while following VS Code light/dark.
+    const chosenTheme = message.type === "devsnip:theme" ? message.chosen || message.id : "";
+    if (message.type === "devsnip:theme" && typeof chosenTheme === "string" && (chosenTheme !== currentTheme || Boolean(message.lockedPreview) !== themePreviewing)) {
+      currentTheme = chosenTheme;
       themePreviewing = Boolean(message.lockedPreview);
       renderThemeButton();
       if (!themePanel.hidden) renderThemePanel();
@@ -1118,4 +1133,5 @@
 
   renderStatus(status);
   render();
+  vscode.postMessage({ type: "updateReady" });
 })();

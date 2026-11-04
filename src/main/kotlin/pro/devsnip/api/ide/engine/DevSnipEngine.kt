@@ -1,12 +1,9 @@
 package pro.devsnip.api.ide.engine
 
 import com.google.gson.JsonArray
-import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.intellij.notification.NotificationGroupManager
-import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
@@ -233,10 +230,15 @@ class DevSnipEngine(val project: Project) : Disposable {
 
     // ------------------------------------------------------------ messages
 
-    /** Delivers a message to the extension (queued until the page has loaded). */
+    /**
+     * Delivers a message to the extension (queued until the page has loaded). A host that is not
+     * running drops it: other hosts broadcast state to every project, and one that starts later
+     * reads the current state from [hostInfo], so a queue there would only grow.
+     */
     fun post(message: JsonObject) {
         val script = "window.__devsnipReceive && window.__devsnipReceive(${WebviewAssets.embed(message)});"
         val now = synchronized(lock) {
+            if (status == Status.IDLE || status == Status.FAILED) return
             if (browser == null || !loaded) {
                 outbox += script
                 false
@@ -246,6 +248,9 @@ class DevSnipEngine(val project: Project) : Disposable {
         }
         if (now) execute(script)
     }
+
+    /** Messages waiting for the page (tests). */
+    internal val queuedMessages: Int get() = synchronized(lock) { outbox.size }
 
     private fun execute(script: String) {
         val b = browser ?: return
@@ -266,7 +271,7 @@ class DevSnipEngine(val project: Project) : Disposable {
             "__ready" -> ready(message)
             "__viewProvider" -> providesSidebar = true
             "__usage" -> DevSnipNative.usageRecorded(project, message.str("command"))
-            "__theme" -> DevSnipNative.themeApplied(message.str("id"))
+            "__theme" -> DevSnipNative.themeApplied(message)
             "__points" -> DevSnipNative.pointsChanged(message["balance"]?.asInt ?: 0)
             else -> panels.handle(message)
         }
@@ -276,7 +281,7 @@ class DevSnipEngine(val project: Project) : Disposable {
         commands = (message["commands"] as? JsonArray)?.mapNotNull { it.takeIf { e -> e.isJsonPrimitive }?.asString }?.toSet().orEmpty()
         val failed = (message["failed"] as? JsonArray)?.map { it.asString }.orEmpty()
         if (failed.isNotEmpty()) LOG.warn("DevSnip Pro: parts of the extension did not load: $failed ${message.str("error")}")
-        message["theme"]?.takeIf { it.isJsonPrimitive }?.let { DevSnipNative.themeApplied(it.asString) }
+        (message["theme"] as? JsonObject)?.let(DevSnipNative::themeApplied)
         message["points"]?.takeIf { it.isJsonPrimitive }?.let { DevSnipNative.pointsChanged(it.asInt) }
         val callbacks = synchronized(lock) {
             status = Status.READY

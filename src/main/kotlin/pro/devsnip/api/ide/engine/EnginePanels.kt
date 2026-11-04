@@ -248,6 +248,8 @@ class EngineSidebarView(private val project: Project, parent: Disposable, privat
     }
 
     override fun setHtml(html: String) {
+        // A (re)started extension renders the view anew and is told its visibility again.
+        lastVisible = null
         browser.load(EnginePages.write(html, TOOLS_VIEW_ID, "sidebar", browser.queryFunction, browser.instance))
     }
 
@@ -256,12 +258,19 @@ class EngineSidebarView(private val project: Project, parent: Disposable, privat
     /** Diagnostics: evaluates an expression in the page. */
     fun probe(expression: String) = browser.probe(expression)
 
-    fun setVisible(visible: Boolean) = engine.post(JsonObject().apply {
-        addProperty("type", "__panelState")
-        addProperty("panel", panelId)
-        addProperty("visible", visible)
-        addProperty("active", visible)
-    })
+    private var lastVisible: Boolean? = null
+
+    /** Tells the extension the sidebar was shown or hidden; tool window events that change neither are not passed on. */
+    fun setVisible(visible: Boolean) {
+        if (lastVisible == visible) return
+        lastVisible = visible
+        engine.post(JsonObject().apply {
+            addProperty("type", "__panelState")
+            addProperty("panel", panelId)
+            addProperty("visible", visible)
+            addProperty("active", visible)
+        })
+    }
 
     override fun failed(error: String) {
         resolved = false

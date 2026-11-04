@@ -107,6 +107,20 @@ class DbBridgeTest {
     }
 
     @Test
+    fun `a row cap stops the server, not just the reading`() {
+        val id = pg()
+        val started = System.nanoTime()
+        val set = bridge.handle("db.query", obj("""{"id":$id,"sql":"SELECT g, repeat('x', 100) AS pad FROM generate_series(1, 3000000) g","params":[],"maxRows":10}"""))!!
+            .asJsonObject["results"].asJsonArray[0].asJsonObject
+        val millis = (System.nanoTime() - started) / 1_000_000
+        System.err.println("DEVSNIP-PERF: 10 of 3,000,000 rows in $millis ms")
+        assertEquals(10, set["rows"].asJsonArray.size())
+        assertEquals(true, set["more"]?.asBoolean, "the cap is reported")
+        // Reading all 3 million rows first took about 900 ms here; stopping at the cap takes under 200.
+        assertTrue(millis < 600, "took $millis ms")
+    }
+
+    @Test
     fun `a running query can be cancelled from another thread`() {
         val id = pg()
         val canceller = Thread {

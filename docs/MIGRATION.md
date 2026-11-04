@@ -1,6 +1,6 @@
 # DevSnip Pro for VS Code → JetBrains: inventory and migration
 
-Source of truth: DevSnip Pro for VS Code **11.84.0** (`sayaib.hue-console`, repository
+Source of truth: DevSnip Pro for VS Code **11.88.0** (`sayaib.hue-console`, repository
 `sayaib/DevSnip-Pro`). This document lists everything the extension contributes and
 where each piece lives in the JetBrains plugin.
 
@@ -59,6 +59,8 @@ code bundled into the page).
 | Browse Data & RAG Tools | `bigDataHub` | — | Extension host |
 | Browse DevOps & Cloud Tools | `devopsGenerator` | — | Extension host |
 | Choose Theme | `chooseTheme` | — | Extension host |
+| Theme Studio (Customize Appearance) | `themeStudio` | — | Extension host; its customization also restyles the IDE's own tool, REST client and scanner tabs |
+| Check for Updates | `checkForUpdates` | — | Not ported: the IDE updates its plugins (*Settings \| Plugins*) |
 | Search All Tools (Regex) | `searchTools` | — | Extension host |
 | REST API Client | `openGUI` | Backend & API | Native page (extension code in page) |
 | cURL Converter | `curlConverter` | Backend & API | Toolkit page (extension code in page) |
@@ -205,6 +207,12 @@ code bundled into the page).
 | `secrets` (database passwords, NVD key, OAuth tokens) | IDE password safe |
 | `workspace.fs`, `findFiles`, Node `fs` | `EngineHost`: the project, the extension's folder and storage, picked files, Maven/Gradle caches and Maven settings; writes only to the project, the extension's own folders and files the user chose |
 | `child_process` (Dependencies & Installation, `which`) | `EngineHost.spawn`: package managers, build tools, Node only; in trusted projects; in the project's folders; output streamed |
+| `child_process` (cloud database tokens: `aws configure export-credentials`, `az account get-access-token`, `gcloud auth print-access-token`) | `EngineHost.spawn`: the three cloud CLIs in the home folder, also in untrusted projects (they only print a token for the user's own account). `exec` (an AWS profile's `credential_process`) is refused |
+| `http` / `https` `request()` (DynamoDB, Cosmos DB, Spanner, Firestore, BigQuery and their token endpoints) | `webview/shims/host-http.js` → the REST client's Kotlin HTTP engine (`RawHttp`), IDE proxy settings; self-signed certificates only for a local emulator the user marked insecure |
+| `worker_threads` + `node:sqlite` (SQLite on a worker thread) | Not available in a page: the adapter's own fallback, sql.js, as on VS Code builds without `node:sqlite` (files up to 512 MB) |
+| Update notifications (Marketplace / Open VSX check, status bar item, sidebar alert) | Not ported: the IDE updates its plugins. The command and the `devsnip.updates.*` settings are left out of the IDE's menus and settings |
+| Feedback form (Supabase, publishable key in `feedback.config.json`) | Same code; the request goes through the IDE's HTTP client. The IDE's version is sent where VS Code sends its own |
+| `window.activeColorTheme`, `onDidChangeActiveColorTheme` (IDE Adaptive pairing) | The IDE's light or dark look (`JBColor.isBright`), updated when the IDE theme changes (`DevSnipThemeListener`) |
 | Integrated terminal (`createTerminal` + `sendText`) | `EngineTerminals`: the user's shell in a real terminal emulator (`TerminalExecutionConsole`) in the Run tool window, so interactive programs work |
 | `axios`, `https`, `tls` (dependency registries, endpoint security scan, analytics, ClickHouse `fetch`) | The REST client's Kotlin HTTP engine (`RawHttp`, `TlsProbe`), IDE proxy settings |
 | Database drivers `pg`, `mysql2`, `mssql`, `oracledb`, `mongodb`, `ioredis` | `DbBridge` on JDBC (PostgreSQL, MariaDB Connector/J for MySQL and MariaDB, Microsoft SQL Server, Oracle thin), the MongoDB Java driver and Jedis; the extension's adapters and SQL builder are unchanged. SQLite runs in the host itself (sql.js) |
@@ -220,7 +228,10 @@ code bundled into the page).
 | Custom editors | Unsaved spreadsheet edits are not kept across an IDE restart (VS Code's hot exit) | JetBrains has no hot-exit API for custom editors; the plugin asks to save on close |
 | Run & Debug Configurations tool | Generates VS Code `launch.json`, as in VS Code | It is a generator whose output format is VS Code's; unchanged on purpose |
 | PostgreSQL client certificates | The key must be PKCS#8 (`BEGIN PRIVATE KEY`) | The JDBC driver does not read PKCS#1 PEM keys; the error says how to convert |
-| SQL Server | SQL Server logins only (as in VS Code) | Same as the extension |
+| SQL Server | SQL Server logins, and Microsoft Entra ID access tokens for Azure SQL (as in VS Code) | Same as the extension; the token is passed to the JDBC driver's `accessToken` |
+| SQLite | Opened with sql.js: files up to 512 MB; no 30-second timeout, and a running query can't be cancelled | The IDE's extension host has no `node:sqlite` or worker threads |
+| AWS `credential_process` | Not supported; access keys, SSO and static-key profiles work | The IDE does not run shell command lines |
+| Update notifications | Not ported | The IDE updates its plugins itself |
 | VS Code for the web (11.83) | Not applicable | The JetBrains plugin is always the extension's Desktop edition, with all tools |
 | IDEs without JCEF | Only the REST client and the seven Backend & API tools (native Swing) | The extension's code needs the embedded browser |
 | Resetting feature counters | Not ported | Development-only command in VS Code |

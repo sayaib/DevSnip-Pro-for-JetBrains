@@ -516,10 +516,16 @@ button { font: inherit; color: inherit; }
   .tool.selected, .tree:focus-within .tool.selected { outline: 1px solid Highlight; }
   .meter-fill { background: Highlight; }
 }
-</style>
+
+.update-alert{margin:8px 0;padding:12px;border:1px solid var(--vscode-focusBorder);border-radius:6px;background:var(--vscode-editorWidget-background)}.update-alert p{margin:6px 0}.update-alert button{background:var(--vscode-button-background);color:var(--vscode-button-foreground);border:0;padding:6px 10px;cursor:pointer}.update-alert[hidden]{display:none}</style>
 <title>Tools</title>
 </head>
 <body>
+<section id="updateAlert" class="update-alert" role="status" hidden>
+  <strong>Update available</strong>
+  <p id="updateVersion"></p>
+  <button type="button" id="updateNow">Update now</button>
+</section>
 <div class="appearance" id="appearance">
   <button type="button" class="theme-btn" id="themeBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="themePanel" title="Change how DevSnip Pro looks">
     <span class="codicon codicon-symbol-color theme-icon" aria-hidden="true"></span>

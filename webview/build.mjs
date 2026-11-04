@@ -190,11 +190,16 @@ await build({
     crypto: shim("crypto.js"),
     "node:crypto": shim("crypto.js"),
     axios: shim("axios.js"),
-    https: shim("https.js"),
+    // The cloud databases' REST calls (and the axios shim's https.Agent) go through the IDE.
+    http: shim("host-http.js"),
+    https: shim("host-http.js"),
     tls: shim("tls.js"),
     url: shim("url.js"),
     path: path.join(here, "node_modules/path-browserify"),
     "node:path": path.join(here, "node_modules/path-browserify"),
+    // No worker threads or node:sqlite in a page: the SQLite adapter falls back to sql.js.
+    worker_threads: shim("host-worker_threads.js"),
+    "node:sqlite": shim("host-worker_threads.js"),
     // SQLite runs in the host itself: sql.js's asm.js build needs no WebAssembly file.
     "sql.js": path.join(repoModules, "sql.js/dist/sql-asm.js")
   },
@@ -225,6 +230,9 @@ const copyTree = (dir, prefix) => {
 };
 copyInto(path.join(repo, "package.json"), "package.json");
 copyInto(path.join(repo, "analytics.config.json"), "analytics.config.json");
+// The Feedback form's publishable Supabase key, written by the extension's write-feedback-config.js;
+// without it the form says feedback is not available in this build.
+if (fs.existsSync(path.join(repo, "feedback.config.json"))) copyInto(path.join(repo, "feedback.config.json"), "feedback.config.json");
 copyInto(path.join(repo, "logo.png"), "logo.png");
 copyInto(path.join(here, "../CHANGELOG.md"), "CHANGELOG.md");
 copyTree(path.join(repo, "media"), "media");

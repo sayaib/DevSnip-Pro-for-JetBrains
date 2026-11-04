@@ -112,6 +112,8 @@ class DbBridge {
                     props["trustServerCertificate"] = (p["trustServerCertificate"]?.asBoolean ?: true).toString()
                     props["applicationName"] = p.str("applicationName").ifEmpty { "DevSnip Pro" }
                     props["loginTimeout"] = (timeoutMs / 1000).coerceAtLeast(1).toString()
+                    // Microsoft Entra ID: the token from the Azure CLI (Azure SQL needs encryption, which the extension sets).
+                    p.str("accessToken").takeIf { it.isNotEmpty() }?.let { props["accessToken"] = it }
                     com.microsoft.sqlserver.jdbc.SQLServerDriver().connect(url.toString(), props)
                 }
                 "oracle" -> {
@@ -209,7 +211,10 @@ class DbBridge {
                     // oracledb commits only when asked (autoCommit); the JDBC connection follows the request.
                     p["autoCommit"]?.takeIf { it.isJsonPrimitive }?.asBoolean?.let { if (db.connection.autoCommit != it) db.connection.autoCommit = it }
                     if (timeout > 0) statement.queryTimeout = timeout
-                    if (statement is PreparedStatement) bind(db.kind, statement, if (db.kind == "sqlserver") sqlServerBindOrder(params) else params)
+                    // The server stops after the cap (one more row says there are more), so the driver never
+                    // reads a whole large result into the IDE's memory just for the first rows to be kept.
+                    if (maxRows > 0) statement.maxRows = maxRows + 1
+                    if (statement is PreparedStatement) bind(db.kind, statement, params)
                     var hasResult = if (statement is PreparedStatement) statement.execute() else statement.execute(text, if (db.kind == "mariadb" && p["generatedKeys"]?.asBoolean == true) Statement.RETURN_GENERATED_KEYS else Statement.NO_GENERATED_KEYS)
                     val results = JsonArray()
                     var guard = 0
@@ -290,8 +295,6 @@ class DbBridge {
         val declared = params.indices.joinToString(", ") { i -> "@p${i + 1} ${sqlServerType(params[i])}" }
         return "EXEC sp_executesql N'${text.replace("'", "''")}', N'$declared'" + params.indices.joinToString("") { ", @p${it + 1} = ?" }
     }
-
-    private fun sqlServerBindOrder(params: List<JsonElement>) = params
 
     private fun sqlServerType(value: JsonElement): String = when {
         value.isJsonNull -> "nvarchar(max)"

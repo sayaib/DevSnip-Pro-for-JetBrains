@@ -11,18 +11,19 @@
     snippets, debug-log tools, and points, milestones and rewards as you work.</p>
     <ul>
       <li><b>REST API Client</b>: HTTP, GraphQL and WebSocket requests, environments with <code>{{variables}}</code>, collections, history, cURL, OAuth 2.0, and the Software Developer and AI &amp; ML tools</li>
-      <li><b>Database Client</b>: PostgreSQL, CockroachDB, MySQL, MariaDB, SQL Server, Oracle, SQLite, ClickHouse, MongoDB and Redis: browse, edit rows and run queries</li>
+      <li><b>Database Client</b>: PostgreSQL, CockroachDB, MySQL, MariaDB, SQL Server, Oracle, SQLite, ClickHouse, MongoDB and Redis, plus cloud databases on AWS (RDS, Aurora, DynamoDB, Redshift), Azure (Azure SQL, Cosmos DB) and Google Cloud (Cloud SQL, Spanner, Firestore, BigQuery, AlloyDB): browse, edit rows and run queries</li>
       <li><b>OSV Vulnerability Scanner</b> and <b>SCA Scanner</b> for npm, PyPI, Maven, Gradle, Go, Cargo, NuGet, Composer, RubyGems and more</li>
       <li><b>Security</b>: workspace, cloud &amp; container and dependency audits, and an endpoint scanner</li>
       <li><b>100 toolkit tools</b>: cURL converter, JSON/YAML/XML, JWT, regex, Docker, Kubernetes, CI, LLM tokens and cost, RAG planning and more</li>
       <li><b>Code &amp; productivity</b>: snippets in code completion, Insert / Clean Debug Logs, unused imports, README manager, dependencies &amp; installation</li>
       <li><b>CSV &amp; Excel viewer</b> with editing, and <b>Milestones &amp; Points</b> with quests, streaks, rewards and themes to unlock</li>
+      <li><b>Theme Studio</b>: 17 themes, your own accent, background, corners and fonts, and a light/dark pairing that follows the IDE</li>
     </ul>
     <p>Open the <b>DevSnip Pro</b> tool window, use <b>Tools | DevSnip Pro</b>, or <b>Find Action</b>
     (“DevSnip Pro: …”). The tools run locally. The network is used only by what you ask for: the API client
-    (the URLs you enter), the database client (your servers), the scanners (package names and versions to
+    (the URLs you enter), the database client (your servers and cloud databases), the scanners (package names and versions to
     OSV.dev, registries and Maven Central; CVE ids to NVD), the endpoint scanner (the URL you scan),
-    dependency lookups, and anonymous usage statistics only if you turn them on. No account needed.</p>
+    dependency lookups, feedback you choose to send, and anonymous usage statistics only if you turn them on. No account needed.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>

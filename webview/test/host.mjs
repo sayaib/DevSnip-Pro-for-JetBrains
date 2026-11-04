@@ -169,6 +169,38 @@ await check("themes are locked until earned, and a choice reaches the IDE's page
   assert.notEqual(ide.globalState["devsnip.appearance.theme"], "dracula");
 });
 
+await check("Theme Studio's customization reaches the IDE's pages, and IDE Adaptive pairs with the IDE's light and dark", async () => {
+  assert.ok(ide.ready.commands.includes(P + "themeStudio"));
+  assert.equal(ide.ready.theme.id, "system");
+  const stock = ide.ready.theme.messages.panel.rules.join("\n");
+  assert.equal((await ide.exec(P + "themeStudio")).error, null);
+  await ide.settle(50);
+  const studio = ide.panelByType("devsnip.themeStudio");
+  assert.ok(studio && studio.html.includes("theme-studio.js"), "the Theme Studio page opens");
+  assert.ok(studio.html.includes("Follow the IDE") && !studio.html.includes("VS Code Adaptive"), "said the JetBrains way");
+  ide.panelMessage(studio.panel, { type: "custom", value: { accent: "#c2185b", radius: "sharp" } });
+  await ide.settle(50);
+  assert.equal(ide.globalState["devsnip.appearance.custom"]?.accent, "#c2185b");
+  assert.notEqual(ide.themeMessages.panel.rules.join("\n"), stock, "the IDE's pages get the customized rules");
+  assert.ok(ide.themeMessages.sidebar.rules.length > 0);
+  // The IDE switches to its light theme: the studio hears it.
+  const before = studio.posted.length;
+  ide.deliver({ type: "__colorTheme", kind: "light" });
+  await ide.settle(50);
+  assert.ok(studio.posted.slice(before).some(m => m?.type === "studio:state" && m.state.vscodeKind === "light"), "the studio sees the IDE's light theme");
+  ide.panelMessage(studio.panel, { type: "reset" });
+  await ide.settle(50);
+  assert.equal(ide.globalState["devsnip.appearance.custom"], undefined);
+});
+
+await check("plugin updates are left to the IDE", async () => {
+  assert.ok(!ide.ready.commands.includes(P + "checkForUpdates"));
+  const contributions = JSON.parse(fs.readFileSync(new URL("../../src/main/resources/webview/contributions.json", import.meta.url), "utf8"));
+  assert.ok(!contributions.commands.some(c => c.command === P + "checkForUpdates"));
+  const settings = [contributions.configuration].flat().flatMap(c => Object.keys(c.properties ?? {}));
+  assert.ok(!settings.some(key => key.startsWith("devsnip.updates.")));
+});
+
 await check("the REST client's ledger spends and refunds points", async () => {
   const balance = (await ide.ledger("balance")).result;
   const spent = await ide.ledger("spend", { amount: 1, reason: "test" });

@@ -131,6 +131,9 @@ object IdeThemeCss {
             "charts-green" to hex(ansi(ConsoleHighlighterKeys.GREEN, Color(0x89, 0xD1, 0x85))),
             "charts-yellow" to hex(ansi(ConsoleHighlighterKeys.YELLOW, Color(0xCC, 0xA7, 0x00))),
             "charts-blue" to hex(ansi(ConsoleHighlighterKeys.BLUE, Color(0x3B, 0x8E, 0xEA))),
+            "charts-orange" to hex(warning),
+            // The editor's own selection colour, for selected text in code previews.
+            "editor-selectionBackground" to hex(scheme.getColor(EditorColors.SELECTION_BACKGROUND_COLOR) ?: selection),
             "editor-findMatchBackground" to hex(searchMatch),
             "editor-findMatchHighlightBackground" to rgba(searchMatch, 0.45),
             "symbolIcon-propertyForeground" to hex(syntax(DefaultLanguageHighlighterColors.INSTANCE_FIELD, link)),

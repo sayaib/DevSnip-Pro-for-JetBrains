@@ -120,13 +120,21 @@ write("tool-commands.json", JSON.stringify(TOOLKIT_COMMANDS.map(c => ({ command:
 
 // ---- What the IDE's menus need from package.json: commands, settings, menus, keybindings ----
 const manifest = JSON.parse(fs.readFileSync(path.join(process.env.DEVSNIP_VSCODE_REPO_RESOLVED, "package.json"), "utf8"));
+// The IDE updates its plugins itself (Settings | Plugins), so the extension's Marketplace
+// update check, its command and its devsnip.updates.* settings are left out.
+const UPDATE_COMMAND = `${COMMAND_PREFIX}checkForUpdates`;
+const withoutUpdates = configuration => [configuration].flat().map(section => ({
+  ...section,
+  properties: Object.fromEntries(Object.entries(section.properties ?? {}).filter(([key]) => !key.startsWith("devsnip.updates.")))
+}));
+const menus = Object.fromEntries(Object.entries(manifest.contributes.menus ?? {}).map(([where, entries]) => [where, entries.filter(e => e.command !== UPDATE_COMMAND)]));
 write("contributions.json", JSON.stringify({
   version: manifest.version,
-  commands: manifest.contributes.commands,
-  menus: manifest.contributes.menus,
+  commands: manifest.contributes.commands.filter(c => c.command !== UPDATE_COMMAND),
+  menus,
   submenus: manifest.contributes.submenus,
   keybindings: manifest.contributes.keybindings,
-  configuration: manifest.contributes.configuration,
+  configuration: Array.isArray(manifest.contributes.configuration) ? withoutUpdates(manifest.contributes.configuration) : withoutUpdates(manifest.contributes.configuration)[0],
   customEditors: manifest.contributes.customEditors,
   snippets: manifest.contributes.snippets
 }));

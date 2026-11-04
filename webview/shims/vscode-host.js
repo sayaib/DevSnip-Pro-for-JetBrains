@@ -210,6 +210,7 @@ export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3
 export const TextEditorRevealType = { Default: 0, InCenter: 1, InCenterIfOutsideViewport: 2, AtTop: 3 };
 export const QuickPickItemKind = { Separator: -1, Default: 0 };
 export const UIKind = { Desktop: 1, Web: 2 };
+export const ColorThemeKind = { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 };
 export const OverviewRulerLane = { Left: 1, Center: 2, Right: 4, Full: 7 };
 export const DiagnosticSeverity = { Error: 0, Warning: 1, Information: 2, Hint: 3 };
 
@@ -466,6 +467,16 @@ let activeEditorInfo = null;
 let visibleEditorInfos = [];
 let activeEditor;
 const activeEditorChanged = new EventEmitter();
+
+// The IDE's theme is light or dark (it has no high-contrast kind of its own); it says when that changes.
+let colorThemeKind = host().themeKind === "light" ? ColorThemeKind.Light : ColorThemeKind.Dark;
+const colorThemeChanged = new EventEmitter();
+onHostEvent("__colorTheme", message => {
+  const kind = message.kind === "light" ? ColorThemeKind.Light : ColorThemeKind.Dark;
+  if (kind === colorThemeKind) return;
+  colorThemeKind = kind;
+  colorThemeChanged.fire({ kind });
+});
 
 function editorFor(info) {
   if (!info) return undefined;
@@ -1361,7 +1372,7 @@ export const window = {
     const out = visibleEditorInfos.map(info => (activeEditor && activeEditor.id === info.id ? activeEditor : new HostTextEditor(info)));
     return out;
   },
-  get activeColorTheme() { return { kind: host().themeKind === "light" ? 1 : 2 }; },
+  get activeColorTheme() { return { kind: colorThemeKind }; },
   get terminals() { return [...terminals]; },
   get state() { return { focused: true, active: true }; },
   get tabGroups() {
@@ -1370,7 +1381,7 @@ export const window = {
   onDidChangeActiveTextEditor: activeEditorChanged.event,
   onDidChangeVisibleTextEditors: never,
   onDidChangeTextEditorSelection: never,
-  onDidChangeActiveColorTheme: never,
+  onDidChangeActiveColorTheme: colorThemeChanged.event,
   onDidChangeWindowState: never,
   onDidCloseTerminal: terminalClosed.event,
   onDidOpenTerminal: terminalOpened.event,
@@ -1601,6 +1612,6 @@ export default {
   SnippetString, ThemeColor, ThemeIcon, MarkdownString, WorkspaceEdit, TextEdit, FileSystemError,
   TabInputText, TabInputWebview, TabInputCustom, TabInputTextDiff,
   ViewColumn, ProgressLocation, FileType, StatusBarAlignment, ExtensionMode, EndOfLine, ConfigurationTarget, TextEditorRevealType,
-  QuickPickItemKind, UIKind, OverviewRulerLane, DiagnosticSeverity,
+  QuickPickItemKind, UIKind, ColorThemeKind, OverviewRulerLane, DiagnosticSeverity,
   workspace, window, commands, env, languages, extensions, version
 };
