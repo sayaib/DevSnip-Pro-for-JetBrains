@@ -293,18 +293,25 @@ class HttpEngineIntegrationTest {
 class HttpsVerificationTest {
     @Test
     fun `self-signed certificates fail by default and pass with verification off`(@TempDir dir: File) {
-        MockServer.selfSignedHttps(dir).use { server ->
-            server.handle("/secure") { ex, _ -> ex.respond(200, """{"tls":true}""") }
-            val engine = HttpEngine(defaultProxySelector = { null })
+        // The headless IDE accepts certificates automatically; exercise JVM trust here.
+        val previousSslContext = javax.net.ssl.SSLContext.getDefault()
+        javax.net.ssl.SSLContext.setDefault(javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, null, null) })
+        try {
+            MockServer.selfSignedHttps(dir).use { server ->
+                server.handle("/secure") { ex, _ -> ex.respond(200, """{"tls":true}""") }
+                val engine = HttpEngine(defaultProxySelector = { null })
 
-            val error = assertThrows<RequestFailedException> { engine.execute(ApiRequest(url = server.url("/secure")), null, 5_000) }
-            val chain = generateSequence<Throwable>(error) { it.cause }.joinToString(" <- ") { "${it.javaClass.name}: ${it.message}" }
-            assertEquals("SSL certificate problem", error.description.title, chain)
-            assertEquals(ErrorAction.SETTINGS, error.description.action)
+                val error = assertThrows<RequestFailedException> { engine.execute(ApiRequest(url = server.url("/secure")), null, 5_000) }
+                val chain = generateSequence<Throwable>(error) { it.cause }.joinToString(" <- ") { "${it.javaClass.name}: ${it.message}" }
+                assertEquals("SSL certificate problem", error.description.title, chain)
+                assertEquals(ErrorAction.SETTINGS, error.description.action)
 
-            // Host name "localhost" does not match the certificate's CN either; verification off skips both checks.
-            val response = engine.execute(ApiRequest(url = server.url("/secure", host = "localhost"), verifySsl = false), null, 5_000)
-            assertEquals(200, response.status)
+                // Host name "localhost" does not match the certificate's CN either; verification off skips both checks.
+                val response = engine.execute(ApiRequest(url = server.url("/secure", host = "localhost"), verifySsl = false), null, 5_000)
+                assertEquals(200, response.status)
+            }
+        } finally {
+            javax.net.ssl.SSLContext.setDefault(previousSslContext)
         }
     }
 }

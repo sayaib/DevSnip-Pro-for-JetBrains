@@ -27,8 +27,8 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
-    <!-- From 2026.2 the embedded browser (JCEF) is the bundled "Web Browser (JCEF)" plugin; earlier IDEs have it in the runtime. -->
-    <depends optional="true" config-file="devsnip-jcef.xml">com.intellij.modules.jcef</depends>
+    <!-- Required so compatible Android Studio installations also install Web Browser (JCEF). -->
+    <depends>com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <fileEditorProvider implementation="pro.devsnip.api.ide.web.DevSnipEditorProvider"/>

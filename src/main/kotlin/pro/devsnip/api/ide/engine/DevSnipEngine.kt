@@ -172,7 +172,7 @@ class DevSnipEngine(val project: Project) : Disposable {
                 override fun onBeforeBrowse(cefBrowser: CefBrowser, frame: CefFrame, request: CefRequest, userGesture: Boolean, isRedirect: Boolean): Boolean =
                     frame.isMain && pageFile != null && request.url != pageFile!!.toUri().toString()
 
-                override fun onRenderProcessTerminated(cefBrowser: CefBrowser, status: org.cef.handler.CefRequestHandler.TerminationStatus) {
+                override fun onRenderProcessTerminated(cefBrowser: CefBrowser, status: org.cef.handler.CefRequestHandler.TerminationStatus, errorCode: Int, errorString: String) {
                     fail("The extension host stopped ($status).")
                 }
             }, b.cefBrowser)

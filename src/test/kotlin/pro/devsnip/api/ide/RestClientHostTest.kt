@@ -350,23 +350,30 @@ class RestClientHostTest {
 
     @Test
     fun `TLS for the security scan reports an untrusted certificate instead of failing`() {
-        val https = MockServer.selfSignedHttps(dir).handle("/") { ex, _ -> ex.respond(200, "{}") }
+        // The headless IDE accepts certificates automatically; exercise JVM trust here.
+        val previousSslContext = javax.net.ssl.SSLContext.getDefault()
+        javax.net.ssl.SSLContext.setDefault(javax.net.ssl.SSLContext.getInstance("TLS").apply { init(null, null, null) })
         try {
-            val strict = rpc("http.raw", """{"id":"t1","method":"GET","url":"${https.url("/")}"}""")
-            assertEquals("CERT_INVALID", strict.getAsJsonObject("errorData")["code"].asString)
-            val lax = rpc("http.raw", """{"id":"t2","method":"GET","url":"${https.url("/")}","rejectUnauthorized":false}""")
-            assertEquals(200, lax.getAsJsonObject("result")["status"].asInt)
+            val https = MockServer.selfSignedHttps(dir).handle("/") { ex, _ -> ex.respond(200, "{}") }
+            try {
+                val strict = rpc("http.raw", """{"id":"t1","method":"GET","url":"${https.url("/")}"}""")
+                assertEquals("CERT_INVALID", strict.getAsJsonObject("errorData")["code"].asString)
+                val lax = rpc("http.raw", """{"id":"t2","method":"GET","url":"${https.url("/")}","rejectUnauthorized":false}""")
+                assertEquals(200, lax.getAsJsonObject("result")["status"].asInt)
 
-            val probe = rpc("tls.probe", """{"host":"127.0.0.1","port":${https.port},"servername":"127.0.0.1","timeoutMs":5000}""").getAsJsonObject("result")
-            assertFalse(probe["authorized"].asBoolean)
-            assertNotNull(probe["authorizationError"])
-            assertTrue(probe["protocol"].asString.startsWith("TLSv1."))
-            val certificate = probe.getAsJsonObject("certificate")
-            assertEquals("devsnip-test", certificate.getAsJsonObject("subject")["CN"].asString)
-            assertEquals(2048, certificate["bits"].asInt)
-            assertTrue(java.time.Instant.now().toEpochMilli() < parseNodeDate(certificate["valid_to"].asString))
+                val probe = rpc("tls.probe", """{"host":"127.0.0.1","port":${https.port},"servername":"127.0.0.1","timeoutMs":5000}""").getAsJsonObject("result")
+                assertFalse(probe["authorized"].asBoolean)
+                assertNotNull(probe["authorizationError"])
+                assertTrue(probe["protocol"].asString.startsWith("TLSv1."))
+                val certificate = probe.getAsJsonObject("certificate")
+                assertEquals("devsnip-test", certificate.getAsJsonObject("subject")["CN"].asString)
+                assertEquals(2048, certificate["bits"].asInt)
+                assertTrue(java.time.Instant.now().toEpochMilli() < parseNodeDate(certificate["valid_to"].asString))
+            } finally {
+                https.close()
+            }
         } finally {
-            https.close()
+            javax.net.ssl.SSLContext.setDefault(previousSslContext)
         }
     }
 

@@ -112,7 +112,7 @@ class EngineCustomEditor(private val project: Project, private val file: Virtual
     private fun setDirty(value: Boolean) {
         if (dirty == value) return
         dirty = value
-        changes.firePropertyChange(FileEditor.PROP_MODIFIED, !value, value)
+        changes.firePropertyChange("modified", !value, value)
     }
 
     /** Save (the page's button, Save All, or closing with unsaved edits); completes with whether it worked. */

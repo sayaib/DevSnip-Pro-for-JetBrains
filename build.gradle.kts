@@ -38,7 +38,7 @@ dependencies {
     implementation("redis.clients:jedis:5.2.0") { exclude(group = "com.google.code.gson") }
 
     intellijPlatform {
-        intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
+        intellijIdeaUltimate(providers.gradleProperty("platformVersion"))
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -81,6 +81,12 @@ intellijPlatform {
         // The name, vendor and description live in plugin.xml only.
         version = providers.gradleProperty("pluginVersion")
         changeNotes = """
+            <p><b>1.2.1</b>: full DevSnip Pro interface on compatible Android Studio installations.</p>
+            <ul>
+              <li>Web Browser (JCEF) is now a required dependency, installed with DevSnip Pro on compatible Android Studio versions</li>
+              <li>Replaced the reduced native interface with recovery instructions and an Open Plugins Settings button when the embedded browser cannot start</li>
+              <li>Requires IDE 2025.3.1 (build 253.29346.138) or newer and an available JCEF module; Android Studio requires a compatible Web Browser (JCEF) plugin</li>
+            </ul>
             <p><b>1.2.0</b>: up to date with DevSnip Pro for VS Code 11.88.0.</p>
             <ul>
               <li>Cloud databases: Amazon RDS, Aurora, DynamoDB and Redshift; Azure SQL, Cosmos DB and Azure Database for PostgreSQL and MySQL; Google Cloud SQL, Spanner, Firestore, BigQuery and AlloyDB, with IAM, Entra ID and gcloud sign-in</li>
@@ -151,7 +157,7 @@ intellijPlatform {
     // ./gradlew verifyPlugin checks binary compatibility with the oldest IDE, a current one and the EAP.
     pluginVerification {
         ides {
-            create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
+            create(IntelliJPlatformType.IntellijIdeaUltimate, "2025.3.1")
             create(IntelliJPlatformType.IntellijIdeaUltimate, "2026.2.3")
             // The Marketplace also verifies against the current EAP.
             create(IntelliJPlatformType.IntellijIdeaUltimate, "263.7307.44")

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.1] - 2026-11-04
+
+### Changed
+- Web Browser (JCEF) is now required so compatible Android Studio installations install the embedded browser dependency with DevSnip Pro.
+- Raised the minimum supported IDE to 2025.3.1 (build 253.29346.138). Android Studio also requires a compatible Web Browser (JCEF) plugin.
+
+### Fixed
+- Removed the silent switch to the reduced native REST Client interface when JCEF is unavailable. The tool window now explains how to recover and includes an Open Plugins Settings button.
+
+See [the release report](docs/RELEASE-1.2.1.md) for validation and deployment status.
+
 ## [1.2.0] - 2026-11-04
 
 Up to date with DevSnip Pro for VS Code 11.88.0: cloud databases, Theme Studio and five new themes, a rebuilt cURL Converter and API Response Inspector, new code previews, and a Feedback form. See docs/RELEASE-1.2.0.md for the tests.

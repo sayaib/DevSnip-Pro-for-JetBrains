@@ -294,15 +294,14 @@ All settings are optional.
 
 ## Requirements and compatibility
 
-- Any IntelliJ-based IDE **2024.1 or newer**, including 2026.2 and later, where the
-  embedded browser runs out of process. The plugin depends only on
-  `com.intellij.modules.platform`.
-- The pages use the IDE's embedded browser (JCEF), which every standard JetBrains IDE
-  includes. Without it, the tool window falls back to a native REST API Client and the seven
-  Backend & API tools.
-- The plugin is dynamic: it can be installed, updated and removed without a restart.
-- The Plugin Verifier finds it compatible with IntelliJ IDEA 2024.1.7, 2026.2.3 and the
-  2026.3 EAP, with no deprecated, experimental or internal API usages.
+- IntelliJ-based IDE **2025.3.1 or newer** (build 253.29346.138+) with the
+  `com.intellij.modules.jcef` module available.
+- **Web Browser (JCEF) is required.** On compatible Android Studio versions, the
+  IDE installs this dependency with DevSnip Pro. Restart if the IDE requests it.
+  Android Studio versions without a compatible JCEF plugin cannot install this release.
+- DevSnip Pro always uses its full browser interface. If JCEF cannot start, the tool
+  window explains how to recover and provides a button to open Plugins settings.
+- Plugin Verifier targets IDEA 2025.3.1, 2026.2.3 and the 2026.3 EAP.
 
 ## Known limitations
 
@@ -340,7 +339,7 @@ The VS Code extension is the single source of truth, and it is not modified:
 
 ### Build and run
 
-You need JDK 17 or newer. Gradle downloads IntelliJ IDEA Community 2024.1.7 to compile
+You need JDK 21 or newer. Gradle downloads IntelliJ IDEA 2025.3.1 to compile
 against, about 1 GB on the first build. No environment variables are needed.
 
 ```bash
@@ -351,7 +350,7 @@ against, about 1 GB on the first build. No environment variables are needed.
 ./gradlew buildPlugin
 ```
 
-The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.2.0.zip`.
+The ZIP is written to `build/distributions/devsnip-pro-jetbrains-1.2.1.zip`.
 
 ```bash
 ./gradlew runIde
@@ -381,7 +380,7 @@ VS Code's UI, such as "Command Palette" → "Find Action".
 | `scripts/db-containers.sh start`, then `./gradlew writeTestClasspath && (cd webview && npm run test:db)` | The Database Client against MySQL, MariaDB, SQL Server, Oracle, ClickHouse and Redis in Docker, compared with the extension's own Node drivers. Run `scripts/db-containers.sh stop` afterwards |
 | `DEVSNIP_SELFTEST=/path/to/project ./gradlew runIde` | A self-check in a real IDE: the main pages, the sidebar, the CSV viewer and Insert Debug Log. It writes `DEVSNIP-SELFTEST` lines to the sandbox `idea.log` |
 | `scripts/smoke-test-zip.sh <IDE Contents folder> <project>` | The same self-check with the release ZIP installed into a fresh IDE configuration. The project needs a `README.md`, a `data.csv` and a `src/app.js` |
-| `./gradlew verifyPlugin` | Plugin Verifier against IDEA 2024.1.7, 2026.2.3 and the 2026.3 EAP |
+| `./gradlew verifyPlugin` | Plugin Verifier against IDEA 2025.3.1, 2026.2.3 and the 2026.3 EAP |
 | `./gradlew verifyPlugin -PverifyAllIdes` | Also WebStorm, PyCharm, GoLand, PhpStorm, RubyMine, CLion and Rider 2026.2 (about 10 GB of downloads); `-PverifyAllIdes=WebStorm,PyCharmProfessional` checks only those |
 
 All automated tests use local servers on `127.0.0.1`. No production or third-party API is
@@ -390,7 +389,7 @@ contacted.
 ## Publishing
 
 The current release checklist, with its test results and measurements, is in
-[docs/RELEASE-1.2.0.md](docs/RELEASE-1.2.0.md).
+[docs/RELEASE-1.2.1.md](docs/RELEASE-1.2.1.md).
 
 1. **Signing key (one time).** Create a certificate as described in
    [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html), and
@@ -404,7 +403,7 @@ The current release checklist, with its test results and measurements, is in
    ./gradlew signPlugin
    ```
 
-   Upload `build/distributions/devsnip-pro-jetbrains-1.2.0-signed.zip` at
+   Upload `build/distributions/devsnip-pro-jetbrains-1.2.1-signed.zip` at
    [plugins.jetbrains.com](https://plugins.jetbrains.com) (your profile → **Add new
    plugin**), with the MIT licence and the source URL. JetBrains reviews new plugins
    before listing them.
